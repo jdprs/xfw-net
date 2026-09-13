@@ -43,7 +43,34 @@
     ];
 
     function loadModule(index) {
-        if (index >= modulePaths.length) return;
+        if (index >= modulePaths.length) {
+            // v10.0: 联机模式下追加 net/ 模块（36-39），完成后触发 onAllModulesLoaded 钩子
+            const mode = window.GAME_MODE || 'local';
+            if (mode === 'master' || mode === 'player') {
+                const netPaths = [
+                    'net/36-p2p.js',
+                    'net/37-lobby.js',
+                    'net/38-game-sync.js',
+                    'net/39-chat.js'
+                ];
+                let netIndex = 0;
+                const loadNet = () => {
+                    if (netIndex >= netPaths.length) {
+                        if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+                        return;
+                    }
+                    const s = document.createElement('script');
+                    s.src = moduleBasePath + netPaths[netIndex];
+                    s.onload = () => { netIndex++; loadNet(); };
+                    s.onerror = () => console.error('Net module load failed: ' + netPaths[netIndex]);
+                    document.head.appendChild(s);
+                };
+                loadNet();
+            } else {
+                if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+            }
+            return;
+        }
         const script = document.createElement("script");
         script.src = moduleBasePath + modulePaths[index];
         script.onload = () => loadModule(index + 1);

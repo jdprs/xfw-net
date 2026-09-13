@@ -3,14 +3,43 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>小富翁股票投资游戏 v10.0</title>
+    <title>小富翁股票投资游戏 v10.0 · 单机</title>
+    <script>window.GAME_MODE='local';</script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js">
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="src/net/36-p2p.js"></script>
-    <script src="src/net/37-lobby.js"></script>
+    <script>
+      // v10.0 单机页：从 localStorage 读取大厅设置并自动开局
+      window.onAllModulesLoaded = function () {
+        let cfg = {};
+        try { cfg = JSON.parse(localStorage.getItem('xfw_local_config') || '{}'); } catch (e) {}
+        const setVal = (id, v) => { const e = document.getElementById(id); if (e && v != null) e.value = v; };
+        setVal('human-players', cfg.humanPlayers);
+        setVal('ai-players', cfg.aiPlayers);
+        setVal('total-rounds', cfg.totalRounds);
+        if (cfg.admin) {
+          document.getElementById('admin-panel').style.display = 'block';
+          window.adminMode = true;
+          setVal('admin-init-money', cfg.admin.initMoney);
+          setVal('admin-bank-money', cfg.admin.bankMoney);
+          setVal('admin-loot-threshold', cfg.admin.lootThreshold);
+          setVal('admin-loot-ratio', cfg.admin.lootRatio);
+          setVal('admin-volatility-scale', cfg.admin.volatilityScale);
+          setVal('admin-algo-mode', cfg.admin.algoMode);
+          setVal('admin-banner-duration', cfg.admin.bannerDuration);
+          setVal('admin-ai-think-min', cfg.admin.thinkMin);
+          setVal('admin-ai-think-max', cfg.admin.thinkMax);
+          setVal('admin-chart-type', cfg.admin.chartType);
+          setVal('admin-share-price', cfg.admin.sharePrice);
+          setVal('admin-darkhorse-multiplier', cfg.admin.dhMult);
+          setVal('admin-darkhorse-prob', cfg.admin.dhProb);
+          setVal('admin-bankruptcy-threshold', cfg.admin.bThreshold);
+          setVal('admin-bankruptcy-fund', cfg.admin.bFund);
+        }
+        if (typeof initGame === 'function') initGame(false);
+      };
+    </script>
 </head>
 <body>
     <!-- ===== 健康游戏忠告 ===== -->

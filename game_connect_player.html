@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>小富翁股票投资游戏 v10.0</title>
+    <title>小富翁股票投资游戏 v10.0 · 联机</title>
+    <script>window.GAME_MODE='player';</script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js">
     </script>
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="src/net/36-p2p.js"></script>
-    <script src="src/net/37-lobby.js"></script>
 </head>
 <body>
+    <!-- ===== v10.0 联机状态栏 ===== -->
+    <div class="net-status-bar">
+        <span class="net-status-dot connecting" id="net-status-dot"></span>
+        <span id="net-status-text">连接中…</span>
+        <span class="net-status-room">🌐 联机中</span>
+    </div>
     <!-- ===== 健康游戏忠告 ===== -->
     <div id="health-modal">
         <div class="health-box">
