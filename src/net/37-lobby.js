@@ -9,6 +9,10 @@
  * ================================================================
  */
 (() => {
+    // 调试用：?reset=1 清除保存的用户名，强制弹出用户名弹窗
+    if (location.search.indexOf('reset=1') >= 0) {
+        try { localStorage.removeItem('xfw_username'); } catch(e) {}
+    }
     const KV_BUCKET = 'xfw-new-rooms';
     const KV_BASE = 'https://kvdb.io/' + KV_BUCKET;
     const WAIT_MAX_SECONDS = 5 * 60; // 5 分钟等待上限
