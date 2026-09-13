@@ -98,9 +98,9 @@
         box(`
             <div class="mp-title">👤 输入你的游戏昵称</div>
             <div class="mp-field"><input type="text" id="mp-username" maxlength="12" placeholder="昵称（可不唯一，仅作辨识）" value="${esc(Lobby.username)}"></div>
-            <div class="flex-row">
-                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpUsernameOk()">✅ 确认</button>
-                <button class="btn btn-warning" onmousedown="event.preventDefault()" onclick="window.lobbyCloseOverlay()">返回</button>
+            <div style="display:flex;gap:10px;margin-top:12px;">
+                <div id="mp-ok-btn" role="button" tabindex="0" style="flex:1;background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:10px 20px;border-radius:10px;text-align:center;cursor:pointer;font-size:0.9rem;user-select:none;box-shadow:0 4px 14px rgba(46,125,50,0.35);" onmousedown="event.preventDefault();window.mpUsernameOk()" onclick="window.mpUsernameOk()">✅ 确认</div>
+                <div id="mp-cancel-btn" role="button" tabindex="0" style="background:linear-gradient(135deg,#f57c00,#e65100);color:#fff;padding:10px 20px;border-radius:10px;text-align:center;cursor:pointer;font-size:0.9rem;user-select:none;box-shadow:0 4px 14px rgba(245,124,0,0.35);" onmousedown="event.preventDefault();window.lobbyCloseOverlay()" onclick="window.lobbyCloseOverlay()">返回</div>
             </div>
             <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;text-align:center;">昵称不需要唯一，仅用于房间内辨识</div>`);
         // 自动聚焦输入框
@@ -108,6 +108,16 @@
             const inp = document.getElementById('mp-username');
             if (inp) inp.focus();
         }, 50);
+        // 绑定键盘 Enter 支持（role=button 的 div 需要手动处理）
+        setTimeout(function() {
+            const okBtn = document.getElementById('mp-ok-btn');
+            const cancelBtn = document.getElementById('mp-cancel-btn');
+            if (okBtn) okBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.mpUsernameOk(); } });
+            if (cancelBtn) cancelBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.lobbyCloseOverlay(); } });
+            // 输入框按回车也确认
+            const inp = document.getElementById('mp-username');
+            if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.mpUsernameOk(); } });
+        }, 60);
     }
 
     function mpUsernameOk() {
