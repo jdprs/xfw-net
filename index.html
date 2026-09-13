@@ -9,8 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="assets/css/style.css" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <script src="src/net/36-p2p.js"></script>
-    <script src="src/net/37-lobby.js"></script>
 </head>
 <body>
     <!-- ===== 健康游戏忠告 ===== -->
@@ -537,5 +535,8 @@
       9. 所有 UI 自定义，无系统弹窗，适配移动端
     ================================================================ -->
     <script src="src/main.js"></script>
+    <!-- v10.0: 联机脚本放在 body 末尾，确保 DOM 就绪后执行；main.js 会检测 window.Net 避免重复加载 -->
+    <script src="src/net/36-p2p.js"></script>
+    <script src="src/net/37-lobby.js"></script>
 </body>
 </html>

@@ -48,6 +48,12 @@
             //   - 大厅页(index, 无GAME_MODE): 加载 36-p2p + 37-lobby
             //   - 联机游戏页(master/player): 加载全部 36-39
             //   - 单机页(local): 不加载联机模块
+            // v10.0 修复: 如果 window.Net 已存在（说明 36-p2p.js 已通过 body 末尾的
+            //   直接 script 标签加载），跳过动态加载，避免重复执行和状态冲突
+            if (window.Net) {
+                if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+                return;
+            }
             const mode = window.GAME_MODE;
             let netPaths = [];
             if (mode === 'master' || mode === 'player') {

@@ -509,7 +509,10 @@
 
     // ---------- 初始化大厅入口 ----------
     function init() {
+        // 防重复绑定：如果已初始化过则直接返回（避免脚本重复加载导致事件多次绑定）
+        if (window.__lobbyInitialized) return;
         if (!isLobbyPage()) return;
+        window.__lobbyInitialized = true;
         const btn = document.getElementById('mp-online-btn');
         if (btn) {
             btn.addEventListener('click', function() { askUsername(showMainMenu); });
