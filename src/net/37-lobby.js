@@ -3,6 +3,9 @@
  * 负责：用户名、创建房间、加入房间、广场(kvdb.io)、等待室、倒计时
  * 在 index.html（大厅）以及联机阶段的房主/玩家页面都可加载，
  * 通过检测 DOM 元素是否存在决定是否初始化大厅 UI。
+ *
+ * v10.0 修复：所有弹窗按钮统一使用 inline onclick + window 全局函数，
+ * 避免动态 innerHTML 后 .onclick 赋值失效导致按钮点不动的问题。
  * ================================================================
  */
 (() => {
@@ -29,7 +32,9 @@
     }
 
     function toast(msg, type, title) {
-        if (typeof showBanner === 'function') showBanner(msg, type || 'info', null, title || '');
+        try {
+            if (typeof showBanner === 'function') showBanner(msg, type || 'info', null, title || '');
+        } catch (e) { console.warn('toast error:', e); }
     }
 
     // 仅在大厅页初始化
@@ -73,52 +78,76 @@
         b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;';
         b.innerHTML = innerHtml;
         ov.appendChild(b);
-        ov.onclick = (e) => { if (e.target === ov) closeOverlay(); };
+        // 点击遮罩层空白处关闭（点击面板内不关闭）
+        ov.onclick = function(e) { if (e.target === ov) closeOverlay(); };
         return b;
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     // ---------- 用户名 ----------
     function askUsername(next) {
         if (Lobby.username) { next && next(); return; }
-        const b = box(`
+        Lobby._nextAfterUsername = next;
+        box(`
             <div class="mp-title">👤 输入你的游戏昵称</div>
-            <div class="mp-field"><input type="text" id="mp-username" maxlength="12" placeholder="昵称（可不唯一）" value="${Lobby.username.replace(/"/g,'&quot;')}"></div>
+            <div class="mp-field"><input type="text" id="mp-username" maxlength="12" placeholder="昵称（可不唯一，仅作辨识）" value="${esc(Lobby.username)}"></div>
             <div class="flex-row">
-                <button class="btn btn-success flex-grow" id="mp-username-ok">确认</button>
-                <button class="btn btn-warning" id="mp-username-cancel">返回</button>
-            </div>`);
-        document.getElementById('mp-username-ok').onclick = () => {
-            const v = document.getElementById('mp-username').value.trim();
-            if (!v) { toast('请输入昵称', 'warning'); return; }
+                <button class="btn btn-success flex-grow" onclick="window.mpUsernameOk()">✅ 确认</button>
+                <button class="btn btn-warning" onclick="window.lobbyCloseOverlay()">返回</button>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;text-align:center;">昵称不需要唯一，仅用于房间内辨识</div>`);
+        // 自动聚焦输入框
+        setTimeout(function() {
+            const inp = document.getElementById('mp-username');
+            if (inp) inp.focus();
+        }, 50);
+    }
+
+    function mpUsernameOk() {
+        try {
+            const inp = document.getElementById('mp-username');
+            const v = inp ? inp.value.trim() : '';
+            if (!v) { toast('请输入昵称', 'warning', '⚠️'); return; }
             Lobby.username = v;
             localStorage.setItem('xfw_username', v);
-            next && next();
-        };
-        document.getElementById('mp-username-cancel').onclick = closeOverlay;
+            const next = Lobby._nextAfterUsername;
+            Lobby._nextAfterUsername = null;
+            if (next) next();
+        } catch (e) {
+            console.error('mpUsernameOk error:', e);
+            toast('操作出错：' + e.message, 'error', '❌');
+        }
     }
 
     // ---------- 主菜单 ----------
     function showMainMenu() {
-        const b = box(`
+        box(`
             <div class="mp-title">🌐 联机大厅</div>
-            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">当前昵称：<strong style="color:var(--accent-gold);">${Lobby.username}</strong></p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">当前昵称：<strong style="color:var(--accent-gold);">${esc(Lobby.username)}</strong> <a href="javascript:void(0)" onclick="window.mpChangeUsername()" style="font-size:0.75rem;color:var(--text-secondary);margin-left:6px;">修改昵称</a></p>
             <div class="flex-row mb-8">
-                <button class="btn btn-success flex-grow" id="mp-create">➕ 创建房间</button>
-                <button class="btn btn-primary flex-grow" id="mp-join">🔍 加入房间</button>
+                <button class="btn btn-success flex-grow" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
+                <button class="btn btn-primary flex-grow" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
             </div>
-            <button class="btn btn-outline" id="mp-back" style="width:100%;">返回单机设置</button>`);
-        document.getElementById('mp-create').onclick = showCreateForm;
-        document.getElementById('mp-join').onclick = showJoinForm;
-        document.getElementById('mp-back').onclick = closeOverlay;
+            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>`);
+    }
+
+    function mpChangeUsername() {
+        Lobby.username = '';
+        localStorage.removeItem('xfw_username');
+        askUsername(showMainMenu);
     }
 
     // ---------- 创建房间表单 ----------
     function showCreateForm() {
-        const serverOpts = (window.SIGNAL_SERVERS || []).map((s, i) =>
-            `<option value="${i}">${s.label}</option>`).join('');
-        const b = box(`
+        const serverOpts = (window.SIGNAL_SERVERS || []).map(function(s, i) {
+            return '<option value="' + i + '">' + esc(s.label) + '</option>';
+        }).join('');
+        box(`
             <div class="mp-title">➕ 创建房间</div>
-            <div class="mp-field"><label>房间名</label><input type="text" id="mp-room-name" maxlength="20" placeholder="如：周末炒股局" value="${Lobby.username}的房间"></div>
+            <div class="mp-field"><label>房间名</label><input type="text" id="mp-room-name" maxlength="20" placeholder="如：周末炒股局" value="${esc(Lobby.username + '的房间')}"></div>
             <div class="flex-row">
                 <div class="mp-field flex-grow"><label>内置AI数</label><input type="number" id="mp-ai" min="0" max="3" value="1"></div>
                 <div class="mp-field flex-grow"><label>外接AI数</label><input type="number" id="mp-extai" min="0" max="2" value="0"></div>
@@ -127,78 +156,80 @@
                 <div class="mp-field flex-grow"><label>最多玩家(含房主)</label><input type="number" id="mp-maxp" min="2" max="6" value="4"></div>
                 <div class="mp-field flex-grow"><label>总轮数</label><input type="number" id="mp-rounds" min="10" max="200" value="60"></div>
             </div>
-            <div class="mp-field"><label>信令服务器</label><select id="mp-signal">${serverOpts}</select></div>
+            <div class="mp-field"><label>信令服务器（P2P连接用，免费）</label><select id="mp-signal" onchange="window.mpSignalChange(this.value)">${serverOpts}</select></div>
             <div class="mp-field" id="mp-custom-host-wrap" style="display:none;">
                 <label>自建服务器 host:port:path</label>
                 <input type="text" id="mp-custom-host" placeholder="如：example.com:9000:myroom">
             </div>
-            <label class="mp-check-row"><input type="checkbox" id="mp-public" checked> 公开到广场（其他玩家可直接搜索到）</label>
+            <label class="mp-check-row"><input type="checkbox" id="mp-public" checked> 公开到广场（其他玩家可搜索到）</label>
             <div class="flex-row mt-8">
-                <button class="btn btn-success flex-grow" id="mp-do-create">🚀 创建</button>
-                <button class="btn btn-warning" id="mp-create-back">返回</button>
+                <button class="btn btn-success flex-grow" onclick="window.mpDoCreate()">🚀 创建房间</button>
+                <button class="btn btn-warning" onclick="window.mpShowMainMenu()">返回</button>
             </div>`);
-        document.getElementById('mp-signal').onchange = (e) => {
-            const s = (window.SIGNAL_SERVERS || [])[parseInt(e.target.value)];
-            document.getElementById('mp-custom-host-wrap').style.display = (s && s.custom) ? 'block' : 'none';
-        };
-        document.getElementById('mp-create-back').onclick = showMainMenu;
-        document.getElementById('mp-do-create').onclick = doCreateRoom;
+    }
+
+    function mpSignalChange(val) {
+        const s = (window.SIGNAL_SERVERS || [])[parseInt(val)];
+        const wrap = document.getElementById('mp-custom-host-wrap');
+        if (wrap) wrap.style.display = (s && s.custom) ? 'block' : 'none';
     }
 
     function parseSignal(selectedIdx) {
-        const s = (window.SIGNAL_SERVERS || [])[selectedIdx] || (window.SIGNAL_SERVERS[0]);
+        const s = (window.SIGNAL_SERVERS || [])[selectedIdx] || (window.SIGNAL_SERVERS && window.SIGNAL_SERVERS[0]);
+        if (!s) return { host: '0.peerjs.com', port: 443, secure: true, path: '/', key: 'peerjs' };
         if (!s.custom) return { host: s.host, port: s.port, secure: s.secure, path: '/', key: 'peerjs' };
-        const raw = document.getElementById('mp-custom-host').value.trim();
-        const parts = raw.split(':');
+        const raw = (document.getElementById('mp-custom-host') || {}).value || '';
+        const parts = raw.trim().split(':');
         const host = parts[0] || 'localhost';
         const port = parseInt(parts[1] || '9000');
         const path = parts[2] ? '/' + parts[2] : '/';
         return { host, port, secure: location.protocol === 'https:', path, key: 'peerjs' };
     }
 
-    async function doCreateRoom() {
-        const roomName = document.getElementById('mp-room-name').value.trim() || (Lobby.username + '的房间');
-        const aiCount = clampInt(parseInt(document.getElementById('mp-ai').value) || 0, 0, 3);
-        const extAiCount = clampInt(parseInt(document.getElementById('mp-extai').value) || 0, 0, 2);
-        const maxPlayers = clampInt(parseInt(document.getElementById('mp-maxp').value) || 2, 2, 6);
-        const totalRounds = clampInt(parseInt(document.getElementById('mp-rounds').value) || 60, 10, 200);
-        const signalIdx = parseInt(document.getElementById('mp-signal').value) || 0;
-        const publicRoom = document.getElementById('mp-public').checked;
-        const signal = parseSignal(signalIdx);
-
-        const code = genRoomCode();
-        Lobby.roomConfig = {
-            roomName, hostName: Lobby.username, code, aiCount, extAiCount,
-            maxPlayers, totalRounds, publicRoom, signal, createdAt: Date.now()
-        };
-        Lobby.lobbyPlayers = [{ peerId: 'HOST', name: Lobby.username, isHost: true, online: true }];
-
-        toast('正在创建房间…', 'info', '⏳');
-        try {
-            await netHostCreate(code, signal);
-        } catch (e) {
-            toast('创建房间失败：' + (e && e.type ? e.type : '网络错误'), 'error', '❌');
-            return;
-        }
-        Net.onMessage = handleHostMessage;
-        Net.onPeerOpen = (peerId) => { /* join_request 携带名字 */ };
-        Net.onPeerClose = (peerId) => {
-            const idx = Lobby.lobbyPlayers.findIndex(p => p.peerId === peerId);
-            if (idx >= 0) {
-                Lobby.lobbyPlayers.splice(idx, 1);
-                renderHostWait();
-                netBroadcastRaw({ type: 'player_left', peerId });
-                toast('玩家离开：' + (Net._peerNames?.[peerId] || '未知'), 'warning', '👋');
-            }
-        };
-        // 登记房主自身为玩家0
-        Lobby.mySeatId = 0;
-        if (publicRoom) await publishRoom();
-        startHostCountdown();
-        renderHostWait();
-    }
-
     function clampInt(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
+
+    async function mpDoCreate() {
+        try {
+            const roomName = (document.getElementById('mp-room-name') || {}).value || (Lobby.username + '的房间');
+            const aiCount = clampInt(parseInt((document.getElementById('mp-ai') || {}).value) || 0, 0, 3);
+            const extAiCount = clampInt(parseInt((document.getElementById('mp-extai') || {}).value) || 0, 0, 2);
+            const maxPlayers = clampInt(parseInt((document.getElementById('mp-maxp') || {}).value) || 2, 2, 6);
+            const totalRounds = clampInt(parseInt((document.getElementById('mp-rounds') || {}).value) || 60, 10, 200);
+            const signalIdx = parseInt((document.getElementById('mp-signal') || {}).value) || 0;
+            const publicRoom = !!(document.getElementById('mp-public') || {}).checked;
+            const signal = parseSignal(signalIdx);
+
+            const code = genRoomCode();
+            Lobby.roomConfig = {
+                roomName: roomName.trim() || (Lobby.username + '的房间'),
+                hostName: Lobby.username, code, aiCount, extAiCount,
+                maxPlayers, totalRounds, publicRoom, signal, createdAt: Date.now()
+            };
+            Lobby.lobbyPlayers = [{ peerId: 'HOST', name: Lobby.username, isHost: true, online: true }];
+
+            toast('正在创建房间…', 'info', '⏳');
+            await netHostCreate(code, signal);
+
+            Net.onMessage = handleHostMessage;
+            Net.onPeerOpen = function() {};
+            Net.onPeerClose = function(peerId) {
+                const idx = Lobby.lobbyPlayers.findIndex(function(p) { return p.peerId === peerId; });
+                if (idx >= 0) {
+                    Lobby.lobbyPlayers.splice(idx, 1);
+                    renderHostWait();
+                    netBroadcastRaw({ type: 'player_left', peerId: peerId });
+                    toast('玩家离开：' + ((Net._peerNames && Net._peerNames[peerId]) || '未知'), 'warning', '👋');
+                }
+            };
+            Lobby.mySeatId = 0;
+            if (publicRoom) await publishRoom();
+            startHostCountdown();
+            renderHostWait();
+        } catch (e) {
+            console.error('create room error:', e);
+            toast('创建房间失败：' + ((e && e.type) ? e.type : (e.message || '网络错误')), 'error', '❌');
+        }
+    }
 
     // ---------- 广场：发布 / 拉取 ----------
     async function publishRoom() {
@@ -212,13 +243,12 @@
                 extAi: Lobby.roomConfig.extAiCount,
                 code: Lobby.roomConfig.code
             };
-            await fetch(`${KV_BASE}/${Lobby.roomConfig.code}?ttl=60`, {
+            await fetch(KV_BASE + '/' + Lobby.roomConfig.code + '?ttl=60', {
                 method: 'PUT', body: JSON.stringify(info)
             });
-            // 每 20 秒心跳刷新
             if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-            Lobby.plazaTimer = setInterval(async () => {
-                try { await fetch(`${KV_BASE}/${Lobby.roomConfig.code}?ttl=60`, { method: 'PUT', body: JSON.stringify(info) }); } catch (e) {}
+            Lobby.plazaTimer = setInterval(async function() {
+                try { await fetch(KV_BASE + '/' + Lobby.roomConfig.code + '?ttl=60', { method: 'PUT', body: JSON.stringify(info) }); } catch (e) {}
             }, 20000);
         } catch (e) {
             toast('广场发布失败，将仅用房间号加入', 'warning', '⚠️');
@@ -231,15 +261,15 @@
             if (!resp.ok) throw new Error('kv unavailable');
             const keys = await resp.json();
             const rooms = [];
-            for (const k of keys.slice(0, 30)) {
+            for (const k of (keys || []).slice(0, 30)) {
                 try {
-                    const r = await fetch(`${KV_BASE}/${k}`);
+                    const r = await fetch(KV_BASE + '/' + k);
                     if (r.ok) { const j = await r.json(); if (j && j.code) rooms.push(j); }
                 } catch (e) {}
             }
             return rooms;
         } catch (e) {
-            return null; // 不可用
+            return null;
         }
     }
     window.lobbyFetchPlaza = fetchPlaza;
@@ -248,62 +278,69 @@
     function startHostCountdown() {
         Lobby.waitSeconds = WAIT_MAX_SECONDS;
         if (Lobby.countdownTimer) clearInterval(Lobby.countdownTimer);
-        Lobby.countdownTimer = setInterval(() => {
+        Lobby.countdownTimer = setInterval(function() {
             Lobby.waitSeconds--;
             const el = document.getElementById('mp-wait-timer');
             if (el) el.textContent = formatCountdown(Lobby.waitSeconds);
             if (Lobby.waitSeconds <= 0) {
-                // 到点强关
                 netBroadcastRaw({ type: 'room_closed', reason: '等待超时，房间已关闭' });
                 if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
                 toast('等待超时，房间已关闭', 'warning', '⏰');
-                setTimeout(() => { netClose(); closeOverlay(); }, 1500);
+                setTimeout(function() { netClose(); closeOverlay(); }, 1500);
             }
         }, 1000);
     }
     function formatCountdown(s) {
         const m = Math.floor(s / 60), ss = s % 60;
-        return `${m}:${ss < 10 ? '0' : ''}${ss}`;
+        return m + ':' + (ss < 10 ? '0' : '') + ss;
     }
 
     function renderHostWait() {
-        const list = Lobby.lobbyPlayers.map((p, i) => `
-            <div class="waiting-player-item ${p.isHost ? 'host' : ''}">
+        const list = Lobby.lobbyPlayers.map(function(p, i) {
+            return `<div class="waiting-player-item ${p.isHost ? 'host' : ''}">
                 <span class="wp-dot" style="background:${p.online ? '#66bb6a' : '#ef5350'};"></span>
-                <span class="wp-name">${p.name}${p.isHost ? ' 👑(房主)' : ''}</span>
+                <span class="wp-name">${esc(p.name)}${p.isHost ? ' 👑(房主)' : ''}</span>
                 <span class="wp-tag">座位 ${i}</span>
-            </div>`).join('');
-        const b = box(`
+            </div>`;
+        }).join('');
+        box(`
             <div class="mp-title">🏠 等待玩家加入</div>
-            <p style="font-size:0.85rem;color:var(--text-secondary);">房间名：<strong>${Lobby.roomConfig.roomName}</strong></p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);">房间名：<strong>${esc(Lobby.roomConfig.roomName)}</strong></p>
             <p style="font-size:0.85rem;color:var(--text-secondary);">把下面房间号告诉朋友：</p>
             <div class="mp-code-display" id="mp-code">${Lobby.roomConfig.code}</div>
-            <div class="waiting-timer">⏳ 等待剩余 <span id="mp-wait-timer">${formatCountdown(Lobby.waitSeconds)}</span></div>
+            <div class="waiting-timer">⏳ 房间将在 <span id="mp-wait-timer">${formatCountdown(Lobby.waitSeconds)}</span> 后关闭</div>
             <div class="waiting-player-list">${list}</div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:6px 0;">${Lobby.lobbyPlayers.length}/${Lobby.roomConfig.maxPlayers} 人 · 房主可随时开始游戏</div>
             <div class="flex-row mt-12">
-                <button class="btn btn-success flex-grow" id="mp-start-game">🚀 开始游戏</button>
-                <button class="btn btn-danger" id="mp-close-room">✖ 关闭房间</button>
+                <button class="btn btn-success flex-grow" onclick="window.mpHostStartGame()">🚀 开始游戏</button>
+                <button class="btn btn-danger" onclick="window.mpHostCloseRoom()">✖ 关闭房间</button>
             </div>`);
-        document.getElementById('mp-start-game').onclick = () => hostStartGame();
-        document.getElementById('mp-close-room').onclick = () => {
-            netBroadcastRaw({ type: 'close_room' });
-            if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-            netClose(); closeOverlay();
-        };
     }
 
-    function hostStartGame() {
-        const cfg = {
-            ...Lobby.roomConfig,
-            seats: Lobby.lobbyPlayers.map(p => ({ peerId: p.peerId, name: p.name, isHost: p.isHost }))
-        };
-        localStorage.setItem('xfw_room_config', JSON.stringify(cfg));
-        // 通知所有人开始
-        netBroadcastRaw({ type: 'start_game' });
-        // 房主页跳转
-        window.location.href = 'game_connect_master.html';
+    function mpHostStartGame() {
+        try {
+            const cfg = Object.assign({}, Lobby.roomConfig, {
+                seats: Lobby.lobbyPlayers.map(function(p) { return { peerId: p.peerId, name: p.name, isHost: p.isHost }; })
+            });
+            localStorage.setItem('xfw_room_config', JSON.stringify(cfg));
+            netBroadcastRaw({ type: 'start_game' });
+            window.location.href = 'game_connect_master.html';
+        } catch (e) {
+            console.error('start game error:', e);
+            toast('开始游戏失败：' + e.message, 'error', '❌');
+        }
     }
-    window.lobbyHostStartGame = hostStartGame;
+    window.lobbyHostStartGame = mpHostStartGame;
+
+    function mpHostCloseRoom() {
+        try {
+            netBroadcastRaw({ type: 'close_room' });
+        } catch (e) {}
+        if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
+        try { netClose(); } catch (e) {}
+        closeOverlay();
+        toast('房间已关闭', 'info', '🚪');
+    }
 
     // ---------- 房主消息处理（大厅阶段） ----------
     function handleHostMessage(peerId, msg) {
@@ -315,7 +352,7 @@
             const seatId = Lobby.lobbyPlayers.length;
             if (!Net._peerNames) Net._peerNames = {};
             Net._peerNames[peerId] = msg.playerName;
-            Lobby.lobbyPlayers.push({ peerId, name: msg.playerName, isHost: false, online: true });
+            Lobby.lobbyPlayers.push({ peerId: peerId, name: msg.playerName, isHost: false, online: true });
             netSendToPeer(peerId, {
                 type: 'join_accepted',
                 playerId: seatId,
@@ -327,39 +364,33 @@
                     aiCount: Lobby.roomConfig.aiCount,
                     extAiCount: Lobby.roomConfig.extAiCount
                 },
-                players: Lobby.lobbyPlayers.map((p, i) => ({ seat: i, name: p.name, isHost: p.isHost }))
+                players: Lobby.lobbyPlayers.map(function(p, i) { return { seat: i, name: p.name, isHost: p.isHost }; })
             });
-            netBroadcastRaw({ type: 'player_joined', peerId, playerName: msg.playerName, seat: seatId });
+            netBroadcastRaw({ type: 'player_joined', peerId: peerId, playerName: msg.playerName, seat: seatId });
             renderHostWait();
-            toast(`${msg.playerName} 加入了房间`, 'success', '👋');
-            // 刷新广场人数
+            toast(msg.playerName + ' 加入了房间', 'success', '👋');
             if (Lobby.roomConfig.publicRoom) publishRoom();
         } else if (msg.type === 'chat_message') {
-            netBroadcastRaw({ type: 'chat_message', ...msg, fromPeerId: peerId });
-        } else if (msg.type === 'ping' || msg.type === 'pong') {
-            // handled in p2p layer
+            netBroadcastRaw({ type: 'chat_message', fromPeerId: peerId, playerName: msg.playerName, text: msg.text, timestamp: msg.timestamp });
         }
     }
 
     // ---------- 加入房间 ----------
     function showJoinForm() {
-        const b = box(`
+        box(`
             <div class="mp-title">🔍 加入房间</div>
-            <div class="mp-field"><label>输入房间号（6位）</label>
+            <div class="mp-field"><label>输入房间号（6位数字）</label>
                 <div class="flex-row">
-                    <input type="text" id="mp-join-code" maxlength="6" placeholder="如 123456" style="letter-spacing:2px;">
-                    <button class="btn btn-primary" id="mp-join-go">加入</button>
+                    <input type="text" id="mp-join-code" maxlength="6" placeholder="如 123456" style="letter-spacing:2px;flex:1;">
+                    <button class="btn btn-primary" onclick="window.mpJoinGo()">加入</button>
                 </div>
             </div>
             <div class="section-title" style="margin:10px 0 6px;color:var(--text-secondary);font-size:0.85rem;">🌐 广场公开房间</div>
             <div id="mp-plaza" class="plaza-list"><div class="plaza-empty">加载中…</div></div>
-            <button class="btn btn-warning" id="mp-join-back" style="width:100%;margin-top:8px;">返回</button>`);
-        document.getElementById('mp-join-back').onclick = showMainMenu;
-        document.getElementById('mp-join-go').onclick = () => {
-            const code = document.getElementById('mp-join-code').value.trim();
-            if (!/^\d{6}$/.test(code)) { toast('请输入6位数字房间号', 'warning', '⚠️'); return; }
-            doJoinRoom(code);
-        };
+            <div class="flex-row mt-8">
+                <button class="btn btn-warning flex-grow" onclick="window.mpShowMainMenu()">返回</button>
+                <button class="btn btn-outline flex-grow" onclick="window.mpRefreshPlaza()">🔄 刷新广场</button>
+            </div>`);
         loadPlaza();
     }
 
@@ -376,48 +407,62 @@
             return;
         }
         container.innerHTML = '';
-        rooms.sort((a, b) => (b.players - b.max) - (a.players - a.max));
-        rooms.forEach(r => {
+        rooms.sort(function(a, b) { return (b.players - b.max) - (a.players - a.max); });
+        rooms.forEach(function(r) {
             const item = el('div', 'plaza-room');
             item.innerHTML = `
-                <div class="pr-name">${r.name}<div class="pr-meta">房主：${r.host} · AI×${r.ai||0}${r.extAi?` 外接×${r.extAi}`:''}</div></div>
+                <div class="pr-name">${esc(r.name)}<div class="pr-meta">房主：${esc(r.host)} · AI×${r.ai || 0}${r.extAi ? ' 外接×' + r.extAi : ''}</div></div>
                 <div style="text-align:right;">
                     <div class="pr-meta">${r.players}/${r.max} 人</div>
-                    <div class="pr-code">${r.code}</div>
+                    <div class="pr-code">${esc(r.code)}</div>
                 </div>`;
-            item.onclick = () => doJoinRoom(r.code);
+            item.onclick = function() { mpJoinByCode(r.code); };
             container.appendChild(item);
         });
     }
 
-    async function doJoinRoom(code) {
+    function mpRefreshPlaza() {
+        const container = document.getElementById('mp-plaza');
+        if (container) container.innerHTML = '<div class="plaza-empty">加载中…</div>';
+        loadPlaza();
+    }
+
+    function mpJoinGo() {
+        const code = (document.getElementById('mp-join-code') || {}).value || '';
+        if (!/^\d{6}$/.test(code.trim())) { toast('请输入6位数字房间号', 'warning', '⚠️'); return; }
+        mpJoinByCode(code.trim());
+    }
+
+    async function mpJoinByCode(code) {
         if (Lobby.joining) return;
         Lobby.joining = true;
         const signal = (window.SIGNAL_SERVERS || [])[0];
-        toast('正在连接 ' + code + ' …', 'info', '⏳');
+        toast('正在连接房间 ' + code + ' …', 'info', '⏳');
         try {
             await netPlayerJoin(code, signal, Lobby.username);
         } catch (e) {
             Lobby.joining = false;
-            return;
+            return; // 错误提示已在 p2p 层显示
         }
         Net.onMessage = handleGuestMessage;
-        renderGuestWait({ code });
+        renderGuestWait({ code: code });
     }
 
     // ---------- 玩家等待室 ----------
     function renderGuestWait(meta) {
-        const b = box(`
+        box(`
             <div class="mp-title">⏳ 等待房主开始</div>
-            <p style="font-size:0.85rem;color:var(--text-secondary);">房间号：<strong style="color:var(--accent-gold);letter-spacing:2px;">${meta.code}</strong></p>
-            <div id="mp-guest-roominfo" style="font-size:0.85rem;color:var(--text-secondary);"></div>
+            <p style="font-size:0.85rem;color:var(--text-secondary);">房间号：<strong style="color:var(--accent-gold);letter-spacing:2px;">${esc(meta.code)}</strong></p>
+            <div id="mp-guest-roominfo" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">连接成功，等待房主确认…</div>
             <div class="waiting-player-list" id="mp-guest-list"></div>
-            <button class="btn btn-warning" id="mp-guest-exit" style="width:100%;">🚪 退出等待</button>`);
-        document.getElementById('mp-guest-exit').onclick = () => {
-            netClose();
-            Lobby.joining = false;
-            showMainMenu();
-        };
+            <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:8px 0;">房主开始游戏后将自动进入</div>
+            <button class="btn btn-warning" onclick="window.mpGuestExit()" style="width:100%;">🚪 退出等待</button>`);
+    }
+
+    function mpGuestExit() {
+        try { netClose(); } catch (e) {}
+        Lobby.joining = false;
+        showMainMenu();
     }
 
     function renderGuestList(info) {
@@ -425,14 +470,15 @@
         if (!listEl) return;
         if (info.roomConfig) {
             const ri = document.getElementById('mp-guest-roominfo');
-            if (ri) ri.textContent = `房间：${info.roomConfig.roomName} · 房主 ${info.roomConfig.hostName} · 共 ${info.roomConfig.totalRounds} 轮`;
+            if (ri) ri.textContent = '房间：' + info.roomConfig.roomName + ' · 房主 ' + info.roomConfig.hostName + ' · 共 ' + info.roomConfig.totalRounds + ' 轮';
         }
         const players = info.players || [];
-        listEl.innerHTML = players.map((p, i) => `
-            <div class="waiting-player-item ${p.isHost ? 'host' : ''}">
-                <span class="wp-dot" style="background:${i===info.playerId?'#4fc3f7':'#66bb6a'};"></span>
-                <span class="wp-name">${p.name}${p.isHost ? ' 👑' : ''}${i===info.playerId ? ' (就是你)' : ''}</span>
-            </div>`).join('');
+        listEl.innerHTML = players.map(function(p, i) {
+            return `<div class="waiting-player-item ${p.isHost ? 'host' : ''}">
+                <span class="wp-dot" style="background:${i === info.playerId ? '#4fc3f7' : '#66bb6a'};"></span>
+                <span class="wp-name">${esc(p.name)}${p.isHost ? ' 👑' : ''}${i === info.playerId ? ' (就是你)' : ''}</span>
+            </div>`;
+        }).join('');
     }
 
     // ---------- 玩家消息处理（大厅阶段） ----------
@@ -444,20 +490,18 @@
                 playerId: msg.playerId, yourName: msg.yourName, code: Net.roomCode
             }));
             renderGuestList(msg);
-            toast(`已加入房间，你的座位是 ${msg.playerId + 1} 号`, 'success', '✅');
+            toast('已加入房间，你的座位是 ' + (msg.playerId + 1) + ' 号', 'success', '✅');
         } else if (msg.type === 'join_rejected') {
             Lobby.joining = false;
-            toast('加入被拒绝：' + msg.reason, 'error', '❌');
+            toast('加入被拒绝：' + (msg.reason || '未知原因'), 'error', '❌');
             showMainMenu();
         } else if (msg.type === 'player_joined') {
-            toast(`${msg.playerName} 加入了房间`, 'info', '👋');
-        } else if (msg.type === 'player_left') {
-            // 由 game-sync 阶段处理
+            toast(msg.playerName + ' 加入了房间', 'info', '👋');
         } else if (msg.type === 'start_game') {
             window.location.href = 'game_connect_player.html';
         } else if (msg.type === 'room_closed' || msg.type === 'close_room') {
             toast('房间已关闭：' + (msg.reason || '房主关闭了房间'), 'warning', '🚪');
-            setTimeout(() => { netClose(); showMainMenu(); }, 1500);
+            setTimeout(function() { try { netClose(); } catch(e){} showMainMenu(); }, 1500);
         } else if (msg.type === 'chat_message') {
             if (window.Chat) Chat.append(msg, true);
         }
@@ -467,26 +511,25 @@
     function init() {
         if (!isLobbyPage()) return;
         const btn = document.getElementById('mp-online-btn');
-        if (!btn) return;
-        btn.addEventListener('click', () => {
-            askUsername(() => showMainMenu());
-        });
-        // 单机开始按钮
+        if (btn) {
+            btn.addEventListener('click', function() { askUsername(showMainMenu); });
+        }
         const localBtn = document.getElementById('mp-local-btn');
-        if (localBtn) localBtn.addEventListener('click', () => {
-            // 把当前设置存入 localStorage 供 game_local 读取
-            saveLocalSetup();
-            window.location.href = 'game_local.html';
-        });
+        if (localBtn) {
+            localBtn.addEventListener('click', function() {
+                saveLocalSetup();
+                window.location.href = 'game_local.html';
+            });
+        }
     }
 
     function saveLocalSetup() {
-        const read = (id) => { const e = document.getElementById(id); return e ? e.value : null; };
+        const read = function(id) { const e = document.getElementById(id); return e ? e.value : null; };
         const cfg = {
             humanPlayers: parseInt(read('human-players')) || 1,
             aiPlayers: parseInt(read('ai-players')) || 1,
             totalRounds: parseInt(read('total-rounds')) || 60,
-            admin: adminMode ? {
+            admin: (typeof adminMode !== 'undefined' && adminMode) ? {
                 initMoney: read('admin-init-money'), bankMoney: read('admin-bank-money'),
                 lootThreshold: read('admin-loot-threshold'), lootRatio: read('admin-loot-ratio'),
                 volatilityScale: read('admin-volatility-scale'), algoMode: read('admin-algo-mode'),
@@ -500,9 +543,22 @@
         localStorage.setItem('xfw_local_config', JSON.stringify(cfg));
     }
     window.lobbySaveLocalSetup = saveLocalSetup;
-    // 暴露联机入口（供 inline onclick 兜底调用）
-    window.lobbyStartOnline = function() { askUsername(() => showMainMenu()); };
+
+    // ===== 暴露所有弹窗按钮的全局函数（inline onclick 调用） =====
+    window.lobbyStartOnline = function() { askUsername(showMainMenu); };
     window.lobbyStartLocal = function() { saveLocalSetup(); window.location.href = 'game_local.html'; };
+    window.mpUsernameOk = mpUsernameOk;
+    window.mpShowMainMenu = showMainMenu;
+    window.mpChangeUsername = mpChangeUsername;
+    window.mpShowCreateForm = showCreateForm;
+    window.mpShowJoinForm = showJoinForm;
+    window.mpSignalChange = mpSignalChange;
+    window.mpDoCreate = mpDoCreate;
+    window.mpHostStartGame = mpHostStartGame;
+    window.mpHostCloseRoom = mpHostCloseRoom;
+    window.mpJoinGo = mpJoinGo;
+    window.mpRefreshPlaza = mpRefreshPlaza;
+    window.mpGuestExit = mpGuestExit;
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
