@@ -122,6 +122,53 @@
             const inp = document.getElementById('mp-username');
             if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.mpUsernameOk(); } });
         }, 60);
+        // ===== 终极兜底：捕获阶段 mousedown + 边界盒检测 =====
+        // 即使有透明层高阶覆盖导致 e.target 不是按钮，也能通过坐标判断点击了哪个按钮
+        setTimeout(function() {
+            const handler = function(e) {
+                const okBtn = document.getElementById('mp-ok-btn');
+                const cancelBtn = document.getElementById('mp-cancel-btn');
+                const inp = document.getElementById('mp-username');
+                // 检查确认按钮
+                if (okBtn) {
+                    const r = okBtn.getBoundingClientRect();
+                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        okBtn.style.opacity = '0.7';
+                        setTimeout(function() { if (okBtn) okBtn.style.opacity = ''; }, 150);
+                        window.mpUsernameOk();
+                        return;
+                    }
+                }
+                // 检查返回按钮
+                if (cancelBtn) {
+                    const r = cancelBtn.getBoundingClientRect();
+                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.lobbyCloseOverlay();
+                        return;
+                    }
+                }
+                // 检查输入框（点击则聚焦）
+                if (inp) {
+                    const r = inp.getBoundingClientRect();
+                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+                        inp.focus();
+                        return;
+                    }
+                }
+            };
+            document.addEventListener('mousedown', handler, true);
+            // 弹窗关闭时移除监听器
+            const origClose = window.lobbyCloseOverlay;
+            window.lobbyCloseOverlay = function() {
+                document.removeEventListener('mousedown', handler, true);
+                window.lobbyCloseOverlay = origClose;
+                origClose();
+            };
+        }, 70);
     }
 
     function mpUsernameOk() {
