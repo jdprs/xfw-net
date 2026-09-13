@@ -55,7 +55,9 @@
         let ov = document.getElementById('mp-overlay');
         if (ov) return ov;
         ov = el('div', 'mp-overlay');
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);overflow-y:auto;padding:16px;';
+        // z-index:99999 确保在 health-modal(9999) 等所有层之上；
+        // 不使用 backdrop-filter 避免某些浏览器下鼠标事件穿透异常
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:16px;';
         document.body.appendChild(ov);
         return ov;
     }
@@ -75,7 +77,9 @@
         const ov = openOverlay();
         ov.innerHTML = '';
         const b = el('div', 'mp-panel');
-        b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;';
+        // pointer-events:auto 确保面板及内部按钮可接收鼠标点击；
+        // position:relative + z-index:1 确保面板在遮罩背景之上
+        b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;pointer-events:auto;position:relative;z-index:1;';
         b.innerHTML = innerHtml;
         ov.appendChild(b);
         // 点击遮罩层空白处关闭（点击面板内不关闭）
