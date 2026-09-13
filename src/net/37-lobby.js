@@ -500,6 +500,9 @@
         localStorage.setItem('xfw_local_config', JSON.stringify(cfg));
     }
     window.lobbySaveLocalSetup = saveLocalSetup;
+    // 暴露联机入口（供 inline onclick 兜底调用）
+    window.lobbyStartOnline = function() { askUsername(() => showMainMenu()); };
+    window.lobbyStartLocal = function() { saveLocalSetup(); window.location.href = 'game_local.html'; };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

@@ -44,31 +44,34 @@
 
     function loadModule(index) {
         if (index >= modulePaths.length) {
-            // v10.0: 联机模式下追加 net/ 模块（36-39），完成后触发 onAllModulesLoaded 钩子
-            const mode = window.GAME_MODE || 'local';
+            // v10.0: 联机模块加载
+            //   - 大厅页(index, 无GAME_MODE): 加载 36-p2p + 37-lobby
+            //   - 联机游戏页(master/player): 加载全部 36-39
+            //   - 单机页(local): 不加载联机模块
+            const mode = window.GAME_MODE;
+            let netPaths = [];
             if (mode === 'master' || mode === 'player') {
-                const netPaths = [
-                    'net/36-p2p.js',
-                    'net/37-lobby.js',
-                    'net/38-game-sync.js',
-                    'net/39-chat.js'
-                ];
-                let netIndex = 0;
-                const loadNet = () => {
-                    if (netIndex >= netPaths.length) {
-                        if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
-                        return;
-                    }
-                    const s = document.createElement('script');
-                    s.src = moduleBasePath + netPaths[netIndex];
-                    s.onload = () => { netIndex++; loadNet(); };
-                    s.onerror = () => console.error('Net module load failed: ' + netPaths[netIndex]);
-                    document.head.appendChild(s);
-                };
-                loadNet();
-            } else {
-                if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+                netPaths = ['net/36-p2p.js', 'net/37-lobby.js', 'net/38-game-sync.js', 'net/39-chat.js'];
+            } else if (!mode || mode === 'lobby') {
+                netPaths = ['net/36-p2p.js', 'net/37-lobby.js'];
             }
+            if (netPaths.length === 0) {
+                if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+                return;
+            }
+            let netIndex = 0;
+            const loadNet = () => {
+                if (netIndex >= netPaths.length) {
+                    if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+                    return;
+                }
+                const s = document.createElement('script');
+                s.src = moduleBasePath + netPaths[netIndex];
+                s.onload = () => { netIndex++; loadNet(); };
+                s.onerror = () => console.error('Net module load failed: ' + netPaths[netIndex]);
+                document.head.appendChild(s);
+            };
+            loadNet();
             return;
         }
         const script = document.createElement("script");

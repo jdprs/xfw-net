@@ -159,8 +159,8 @@
 
             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
                 <button class="btn btn-gold" id="load-save-btn" style="display:none;">📂 读取存档</button>
-                <button class="btn btn-success" id="mp-local-btn">🎮 单机开始</button>
-                <button class="btn btn-primary" id="mp-online-btn">🌐 联机开始</button>
+                <button class="btn btn-success" id="mp-local-btn" onclick="if(window.lobbyStartLocal)window.lobbyStartLocal();else{localStorage.setItem('xfw_local_config',JSON.stringify({humanPlayers:1,aiPlayers:1,totalRounds:60,admin:null}));location.href='game_local.html';}">🎮 单机开始</button>
+                <button class="btn btn-primary" id="mp-online-btn" onclick="if(window.lobbyStartOnline)window.lobbyStartOnline();">🌐 联机开始</button>
                 <button class="btn btn-primary btn-sm" id="help-btn-setup">❓ 帮助</button>
                 <!-- 隐藏的兼容按钮（事件绑定需要），单机/联机均跳转独立页面 -->
                 <button class="btn btn-success" id="start-game-btn" style="display:none;">🚀 开始新游戏</button>
