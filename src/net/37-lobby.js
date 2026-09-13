@@ -99,8 +99,8 @@
             <div class="mp-title">👤 输入你的游戏昵称</div>
             <div class="mp-field"><input type="text" id="mp-username" maxlength="12" placeholder="昵称（可不唯一，仅作辨识）" value="${esc(Lobby.username)}"></div>
             <div class="flex-row">
-                <button class="btn btn-success flex-grow" onclick="window.mpUsernameOk()">✅ 确认</button>
-                <button class="btn btn-warning" onclick="window.lobbyCloseOverlay()">返回</button>
+                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpUsernameOk()">✅ 确认</button>
+                <button class="btn btn-warning" onmousedown="event.preventDefault()" onclick="window.lobbyCloseOverlay()">返回</button>
             </div>
             <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;text-align:center;">昵称不需要唯一，仅用于房间内辨识</div>`);
         // 自动聚焦输入框
@@ -132,10 +132,10 @@
             <div class="mp-title">🌐 联机大厅</div>
             <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">当前昵称：<strong style="color:var(--accent-gold);">${esc(Lobby.username)}</strong> <a href="javascript:void(0)" onclick="window.mpChangeUsername()" style="font-size:0.75rem;color:var(--text-secondary);margin-left:6px;">修改昵称</a></p>
             <div class="flex-row mb-8">
-                <button class="btn btn-success flex-grow" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
-                <button class="btn btn-primary flex-grow" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
+                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
+                <button class="btn btn-primary flex-grow" onmousedown="event.preventDefault()" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
             </div>
-            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>`);
+            <button class="btn btn-outline" onmousedown="event.preventDefault()" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>`);
     }
 
     function mpChangeUsername() {
@@ -167,8 +167,8 @@
             </div>
             <label class="mp-check-row"><input type="checkbox" id="mp-public" checked> 公开到广场（其他玩家可搜索到）</label>
             <div class="flex-row mt-8">
-                <button class="btn btn-success flex-grow" onclick="window.mpDoCreate()">🚀 创建房间</button>
-                <button class="btn btn-warning" onclick="window.mpShowMainMenu()">返回</button>
+                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpDoCreate()">🚀 创建房间</button>
+                <button class="btn btn-warning" onmousedown="event.preventDefault()" onclick="window.mpShowMainMenu()">返回</button>
             </div>`);
     }
 
@@ -316,8 +316,8 @@
             <div class="waiting-player-list">${list}</div>
             <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:6px 0;">${Lobby.lobbyPlayers.length}/${Lobby.roomConfig.maxPlayers} 人 · 房主可随时开始游戏</div>
             <div class="flex-row mt-12">
-                <button class="btn btn-success flex-grow" onclick="window.mpHostStartGame()">🚀 开始游戏</button>
-                <button class="btn btn-danger" onclick="window.mpHostCloseRoom()">✖ 关闭房间</button>
+                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpHostStartGame()">🚀 开始游戏</button>
+                <button class="btn btn-danger" onmousedown="event.preventDefault()" onclick="window.mpHostCloseRoom()">✖ 关闭房间</button>
             </div>`);
     }
 
@@ -386,14 +386,14 @@
             <div class="mp-field"><label>输入房间号（6位数字）</label>
                 <div class="flex-row">
                     <input type="text" id="mp-join-code" maxlength="6" placeholder="如 123456" style="letter-spacing:2px;flex:1;">
-                    <button class="btn btn-primary" onclick="window.mpJoinGo()">加入</button>
+                    <button class="btn btn-primary" onmousedown="event.preventDefault()" onclick="window.mpJoinGo()">加入</button>
                 </div>
             </div>
             <div class="section-title" style="margin:10px 0 6px;color:var(--text-secondary);font-size:0.85rem;">🌐 广场公开房间</div>
             <div id="mp-plaza" class="plaza-list"><div class="plaza-empty">加载中…</div></div>
             <div class="flex-row mt-8">
-                <button class="btn btn-warning flex-grow" onclick="window.mpShowMainMenu()">返回</button>
-                <button class="btn btn-outline flex-grow" onclick="window.mpRefreshPlaza()">🔄 刷新广场</button>
+                <button class="btn btn-warning flex-grow" onmousedown="event.preventDefault()" onclick="window.mpShowMainMenu()">返回</button>
+                <button class="btn btn-outline flex-grow" onmousedown="event.preventDefault()" onclick="window.mpRefreshPlaza()">🔄 刷新广场</button>
             </div>`);
         loadPlaza();
     }
@@ -460,7 +460,7 @@
             <div id="mp-guest-roominfo" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">连接成功，等待房主确认…</div>
             <div class="waiting-player-list" id="mp-guest-list"></div>
             <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:8px 0;">房主开始游戏后将自动进入</div>
-            <button class="btn btn-warning" onclick="window.mpGuestExit()" style="width:100%;">🚪 退出等待</button>`);
+            <button class="btn btn-warning" onmousedown="event.preventDefault()" onclick="window.mpGuestExit()" style="width:100%;">🚪 退出等待</button>`);
     }
 
     function mpGuestExit() {
