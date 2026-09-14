@@ -148,9 +148,8 @@
                 Net.masterConn = conn;
                 const timer = setTimeout(() => {
                     setStatus('连接超时', 'disconnected');
-                    if (typeof showBanner === 'function') showBanner('连接房主超时，请检查房间号或信令服务器', 'error', null, '⏰ 连接超时');
                     reject(new Error('timeout'));
-                }, 15000);
+                }, 8000);
                 conn.on('open', () => {
                     clearTimeout(timer);
                     setStatus('已连接房主', 'connected');
@@ -166,12 +165,6 @@
             });
             Net.peer.on('error', (err) => {
                 setStatus('网络错误', 'disconnected');
-                const type = err && err.type;
-                if (type === 'peer-unavailable') {
-                    if (typeof showBanner === 'function') showBanner('房间不存在或房主不在线，请检查房间号', 'error', null, '❌ 加入失败');
-                } else {
-                    if (typeof showBanner === 'function') showBanner('网络错误：' + (type || '未知'), 'error', null, '❌ 联机错误');
-                }
                 reject(err);
             });
         });

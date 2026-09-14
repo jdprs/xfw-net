@@ -293,19 +293,23 @@
     }
 
     async function fetchPlaza() {
+        const ctrl = new AbortController();
+        const timer = setTimeout(function() { ctrl.abort(); }, 5000);
         try {
-            const resp = await fetch(KV_BASE);
+            const resp = await fetch(KV_BASE, { signal: ctrl.signal });
+            clearTimeout(timer);
             if (!resp.ok) throw new Error('kv unavailable');
             const keys = await resp.json();
             const rooms = [];
             for (const k of (keys || []).slice(0, 30)) {
                 try {
-                    const r = await fetch(KV_BASE + '/' + k);
+                    const r = await fetch(KV_BASE + '/' + k, { signal: ctrl.signal });
                     if (r.ok) { const j = await r.json(); if (j && j.code) rooms.push(j); }
                 } catch (e) {}
             }
             return rooms;
         } catch (e) {
+            clearTimeout(timer);
             return null;
         }
     }
@@ -437,6 +441,11 @@
             'mp-join-back': showMainMenu,
             'mp-join-refresh': mpRefreshPlaza
         });
+        // 房间号输入框回车即加入
+        setTimeout(function() {
+            const inp = document.getElementById('mp-join-code');
+            if (inp) inp.onkeydown = function(e) { if (e.key === 'Enter') mpJoinGo(); };
+        }, 30);
         loadPlaza();
     }
 
@@ -482,16 +491,31 @@
     async function mpJoinByCode(code) {
         if (Lobby.joining) return;
         Lobby.joining = true;
-        const signal = (window.SIGNAL_SERVERS || [])[0];
-        toast('正在连接房间 ' + code + ' …', 'info', '⏳');
-        try {
-            await netPlayerJoin(code, signal, Lobby.username);
-        } catch (e) {
-            Lobby.joining = false;
-            return; // 错误提示已在 p2p 层显示
+        // 自动遍历所有公共信令服务器（房主可能用了任意一个）
+        const servers = (window.SIGNAL_SERVERS || []).filter(function(s) { return !s.custom; });
+        let lastErr = null;
+        for (let i = 0; i < servers.length; i++) {
+            const signal = servers[i];
+            toast('正在通过 ' + signal.label + ' 连接房间 ' + code + ' …（' + (i+1) + '/' + servers.length + '）', 'info', '⏳');
+            try {
+                await netPlayerJoin(code, signal, Lobby.username);
+                // 连接成功
+                Net.onMessage = handleGuestMessage;
+                renderGuestWait({ code: code });
+                return;
+            } catch (e) {
+                lastErr = e;
+                try { netClose(); } catch (_) {}
+                // 继续尝试下一个服务器
+            }
         }
-        Net.onMessage = handleGuestMessage;
-        renderGuestWait({ code: code });
+        Lobby.joining = false;
+        const type = lastErr && lastErr.type;
+        let msg = '加入房间失败，请检查房间号或网络';
+        if (type === 'peer-unavailable') msg = '房间不存在或房主已离线，请确认房间号';
+        else if (lastErr && lastErr.message === 'timeout') msg = '连接超时，所有信令服务器均无响应，请稍后重试';
+        else if (lastErr && lastErr.message) msg = '连接失败：' + lastErr.message;
+        toast(msg, 'error', '❌');
     }
 
     // ---------- 玩家等待室 ----------
