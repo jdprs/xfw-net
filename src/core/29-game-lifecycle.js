@@ -363,6 +363,24 @@
             }
             updateGameRulesDisplay();
             document.getElementById('achievement-modal').classList.remove('active');
+
+            // v10.0 联机返回设置页时清理联机残留，避免聊天框/状态栏挂在页面上
+            // 1. 移除聊天面板
+            const chatPanel = document.getElementById('chat-panel');
+            if (chatPanel) chatPanel.remove();
+            if (window.Chat) { window.Chat.panel = null; window.Chat.body = null; window.Chat.history = []; }
+            // 2. 关闭 P2P 连接
+            if (window.Net && typeof netClose === 'function') {
+                try { netClose(); } catch(e) {}
+            }
+            // 3. 移除联机状态栏
+            const netBar = document.querySelector('.net-status-bar');
+            if (netBar) netBar.remove();
+            // 4. 移除房主管理面板和收盘倒计时浮层
+            const reconnectRoot = document.getElementById('net-reconnect-root');
+            if (reconnectRoot) reconnectRoot.remove();
+            const closeTimer = document.getElementById('close-timer-overlay');
+            if (closeTimer) closeTimer.remove();
         }
 
         // ================================================================
