@@ -7,8 +7,10 @@
         let achievementCloseBtn, endGameBtn;
 
         window.onload = function() {
-            // ---- 健康忠告 ----
-            showHealthModal();
+            // ---- 健康忠告（仅大厅页显示，游戏内页面不重复弹出） ----
+            if (!window.GAME_MODE) {
+                showHealthModal();
+            }
 
             // ---- 外接AI配置 ----
             renderExternalAIConfigs();
@@ -60,6 +62,39 @@
             codeImportConfirm = document.getElementById('code-import-confirm-btn');
             achievementCloseBtn = document.getElementById('achievement-close-btn');
             endGameBtn = document.getElementById('end-game-btn');
+
+            // ---- 单机/联机开始按钮补绑定（兼容所有页面，避免按钮点不动） ----
+            // index.html 已有 inline onclick，此处仅在未绑定时补充
+            const mpLocalBtn = document.getElementById('mp-local-btn');
+            const mpOnlineBtn = document.getElementById('mp-online-btn');
+            if (mpLocalBtn && !mpLocalBtn.getAttribute('onclick') && !mpLocalBtn.onclick) {
+                mpLocalBtn.onclick = function() {
+                    if (window.lobbyStartLocal) {
+                        window.lobbyStartLocal();
+                    } else {
+                        try {
+                            const read = function(id) { const e = document.getElementById(id); return e ? e.value : null; };
+                            localStorage.setItem('xfw_local_config', JSON.stringify({
+                                humanPlayers: parseInt(read('human-players')) || 1,
+                                aiPlayers: parseInt(read('ai-players')) || 1,
+                                totalRounds: parseInt(read('total-rounds')) || 60,
+                                admin: null
+                            }));
+                        } catch(e) {}
+                        location.href = 'game_local.html';
+                    }
+                };
+            }
+            if (mpOnlineBtn && !mpOnlineBtn.getAttribute('onclick') && !mpOnlineBtn.onclick) {
+                mpOnlineBtn.onclick = function() {
+                    if (window.lobbyStartOnline) {
+                        window.lobbyStartOnline();
+                    } else {
+                        // 单机页未加载联机模块，跳回大厅页
+                        location.href = 'index.html';
+                    }
+                };
+            }
 
             // ---- 绑定事件 ----
             closeMarketBtn.addEventListener('click', closeMarket);
