@@ -28,7 +28,9 @@
         onPeerClose: null,
         _hbTimer: null,
         _hbTimeoutTimer: null,
-        _lastPong: 0
+        _lastPong: 0,
+        _peerOpened: false,   // 标记 peer 是否已经 open（open 后忽略非致命 error，避免疯狂弹 banner 卡死）
+        _lastErrorBanner: 0   // error banner 防抖时间戳
     };
     window.Net = Net;
     window.SIGNAL_SERVERS = SIGNAL_SERVERS;
@@ -99,6 +101,7 @@
         return new Promise((resolve, reject) => {
             Net.role = 'master';
             Net.roomCode = roomCode;
+            Net._peerOpened = false;
             const id = roomPeerId(roomCode);
             const opts = signal && signal.custom ? {} : { host: signal.host, port: signal.port, secure: signal.secure, key: 'peerjs' };
             try {
@@ -106,6 +109,7 @@
             } catch (e) { reject(e); return; }
             setStatus('信令服务器连接中…', 'connecting');
             Net.peer.on('open', (pid) => {
+                Net._peerOpened = true;
                 Net.peerId = pid;
                 setStatus('房间已创建，等待玩家…', 'connected');
                 startHeartbeat();
@@ -121,6 +125,15 @@
                 conn.on('error', () => handlePeerDisconnect(conn.peer));
             });
             Net.peer.on('error', (err) => {
+                // open 之后的信令错误（如临时断开、网络抖动）不弹 banner，避免疯狂弹 banner 导致页面卡死
+                if (Net._peerOpened) {
+                    const now = Date.now();
+                    if (now - Net._lastErrorBanner > 5000) {
+                        Net._lastErrorBanner = now;
+                        console.warn('Peer error (after open):', err && err.type ? err.type : err);
+                    }
+                    return;
+                }
                 setStatus('网络错误', 'disconnected');
                 const msg = (err && err.type) ? ('信令错误：' + err.type) : '网络连接失败';
                 if (typeof showBanner === 'function') showBanner(msg, 'error', null, '📡 联机错误');
@@ -136,6 +149,7 @@
             Net.role = 'player';
             Net.roomCode = roomCode;
             Net.myPlayerName = playerName;
+            Net._peerOpened = false;
             Net.masterPeerId = roomPeerId(roomCode);
             const opts = signal && signal.custom ? {} : { host: signal.host, port: signal.port, secure: signal.secure, key: 'peerjs' };
             try {
@@ -143,6 +157,7 @@
             } catch (e) { reject(e); return; }
             setStatus('正在连接房主…', 'connecting');
             Net.peer.on('open', (pid) => {
+                Net._peerOpened = true;
                 Net.peerId = pid;
                 const conn = Net.peer.connect(Net.masterPeerId, { reliable: true });
                 Net.masterConn = conn;
@@ -164,6 +179,14 @@
                 conn.on('error', () => handlePeerDisconnect(Net.masterPeerId));
             });
             Net.peer.on('error', (err) => {
+                if (Net._peerOpened) {
+                    const now = Date.now();
+                    if (now - Net._lastErrorBanner > 5000) {
+                        Net._lastErrorBanner = now;
+                        console.warn('Peer error (after open):', err && err.type ? err.type : err);
+                    }
+                    return;
+                }
                 setStatus('网络错误', 'disconnected');
                 reject(err);
             });
@@ -187,6 +210,8 @@
 
     function handlePeerDisconnect(peerId) {
         if (Net.role === 'master') {
+            // 去重：同一个 peerId 的 close+error 只会处理一次，避免重复触发 renderHostWait 导致页面卡死
+            if (!Net.conns.has(peerId)) return;
             Net.conns.delete(peerId);
             if (typeof showBanner === 'function') showBanner('有玩家断开了连接', 'warning', null, '📡 断线');
             if (Net.onPeerClose) Net.onPeerClose(peerId);
@@ -205,6 +230,7 @@
         try { if (Net.masterConn) Net.masterConn.close(); } catch (e) {}
         try { if (Net.peer) Net.peer.destroy(); } catch (e) {}
         Net.conns.clear();
+        Net._peerOpened = false;
     }
     window.netClose = netClose;
 })();
