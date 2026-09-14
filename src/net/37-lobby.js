@@ -59,9 +59,8 @@
         let ov = document.getElementById('mp-overlay');
         if (ov) return ov;
         ov = el('div', 'mp-overlay');
-        // z-index:99999 确保在 health-modal(9999) 等所有层之上；
-        // 不使用 backdrop-filter 避免某些浏览器下鼠标事件穿透异常
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:16px;';
+        // 与游戏内 password-modal 完全一致：z-index 2001 + backdrop-filter
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);overflow-y:auto;padding:16px;';
         document.body.appendChild(ov);
         return ov;
     }
@@ -81,9 +80,7 @@
         const ov = openOverlay();
         ov.innerHTML = '';
         const b = el('div', 'mp-panel');
-        // pointer-events:auto 确保面板及内部按钮可接收鼠标点击；
-        // position:relative + z-index:1 确保面板在遮罩背景之上
-        b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;pointer-events:auto;position:relative;z-index:1;';
+        b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;';
         b.innerHTML = innerHtml;
         ov.appendChild(b);
         // 点击遮罩层空白处关闭（点击面板内不关闭）
@@ -102,73 +99,23 @@
         box(`
             <div class="mp-title">👤 输入你的游戏昵称</div>
             <div class="mp-field"><input type="text" id="mp-username" maxlength="12" placeholder="昵称（可不唯一，仅作辨识）" value="${esc(Lobby.username)}"></div>
-            <div style="display:flex;gap:10px;margin-top:12px;">
-                <div id="mp-ok-btn" role="button" tabindex="0" style="flex:1;background:linear-gradient(135deg,#388e3c,#1b5e20);color:#fff;padding:10px 20px;border-radius:10px;text-align:center;cursor:pointer;font-size:0.9rem;user-select:none;box-shadow:0 4px 14px rgba(46,125,50,0.35);" onmousedown="event.preventDefault();window.mpUsernameOk()" onclick="window.mpUsernameOk()">✅ 确认</div>
-                <div id="mp-cancel-btn" role="button" tabindex="0" style="background:linear-gradient(135deg,#f57c00,#e65100);color:#fff;padding:10px 20px;border-radius:10px;text-align:center;cursor:pointer;font-size:0.9rem;user-select:none;box-shadow:0 4px 14px rgba(245,124,0,0.35);" onmousedown="event.preventDefault();window.lobbyCloseOverlay()" onclick="window.lobbyCloseOverlay()">返回</div>
+            <div class="btn-row">
+                <button class="btn btn-success" id="mp-username-ok">✅ 确认</button>
+                <button class="btn btn-warning" id="mp-username-cancel">返回</button>
             </div>
             <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;text-align:center;">昵称不需要唯一，仅用于房间内辨识</div>`);
-        // 自动聚焦输入框
+        // 与密码弹窗完全一致的模式：.onclick 赋值 + 输入框回车确认
         setTimeout(function() {
             const inp = document.getElementById('mp-username');
-            if (inp) inp.focus();
-        }, 50);
-        // 绑定键盘 Enter 支持（role=button 的 div 需要手动处理）
-        setTimeout(function() {
-            const okBtn = document.getElementById('mp-ok-btn');
-            const cancelBtn = document.getElementById('mp-cancel-btn');
-            if (okBtn) okBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.mpUsernameOk(); } });
-            if (cancelBtn) cancelBtn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.lobbyCloseOverlay(); } });
-            // 输入框按回车也确认
-            const inp = document.getElementById('mp-username');
-            if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.mpUsernameOk(); } });
-        }, 60);
-        // ===== 终极兜底：捕获阶段 mousedown + 边界盒检测 =====
-        // 即使有透明层高阶覆盖导致 e.target 不是按钮，也能通过坐标判断点击了哪个按钮
-        setTimeout(function() {
-            const handler = function(e) {
-                const okBtn = document.getElementById('mp-ok-btn');
-                const cancelBtn = document.getElementById('mp-cancel-btn');
-                const inp = document.getElementById('mp-username');
-                // 检查确认按钮
-                if (okBtn) {
-                    const r = okBtn.getBoundingClientRect();
-                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        okBtn.style.opacity = '0.7';
-                        setTimeout(function() { if (okBtn) okBtn.style.opacity = ''; }, 150);
-                        window.mpUsernameOk();
-                        return;
-                    }
-                }
-                // 检查返回按钮
-                if (cancelBtn) {
-                    const r = cancelBtn.getBoundingClientRect();
-                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.lobbyCloseOverlay();
-                        return;
-                    }
-                }
-                // 检查输入框（点击则聚焦）
-                if (inp) {
-                    const r = inp.getBoundingClientRect();
-                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-                        inp.focus();
-                        return;
-                    }
-                }
-            };
-            document.addEventListener('mousedown', handler, true);
-            // 弹窗关闭时移除监听器
-            const origClose = window.lobbyCloseOverlay;
-            window.lobbyCloseOverlay = function() {
-                document.removeEventListener('mousedown', handler, true);
-                window.lobbyCloseOverlay = origClose;
-                origClose();
-            };
-        }, 70);
+            const okBtn = document.getElementById('mp-username-ok');
+            const cancelBtn = document.getElementById('mp-username-cancel');
+            if (okBtn) okBtn.onclick = mpUsernameOk;
+            if (cancelBtn) cancelBtn.onclick = closeOverlay;
+            if (inp) {
+                inp.focus();
+                inp.onkeydown = function(e) { if (e.key === 'Enter') mpUsernameOk(); };
+            }
+        }, 30);
     }
 
     function mpUsernameOk() {
@@ -193,10 +140,10 @@
             <div class="mp-title">🌐 联机大厅</div>
             <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">当前昵称：<strong style="color:var(--accent-gold);">${esc(Lobby.username)}</strong> <a href="javascript:void(0)" onclick="window.mpChangeUsername()" style="font-size:0.75rem;color:var(--text-secondary);margin-left:6px;">修改昵称</a></p>
             <div class="flex-row mb-8">
-                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
-                <button class="btn btn-primary flex-grow" onmousedown="event.preventDefault()" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
+                <button class="btn btn-success flex-grow" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
+                <button class="btn btn-primary flex-grow" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
             </div>
-            <button class="btn btn-outline" onmousedown="event.preventDefault()" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>`);
+            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>`);
     }
 
     function mpChangeUsername() {
@@ -228,8 +175,8 @@
             </div>
             <label class="mp-check-row"><input type="checkbox" id="mp-public" checked> 公开到广场（其他玩家可搜索到）</label>
             <div class="flex-row mt-8">
-                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpDoCreate()">🚀 创建房间</button>
-                <button class="btn btn-warning" onmousedown="event.preventDefault()" onclick="window.mpShowMainMenu()">返回</button>
+                <button class="btn btn-success flex-grow" onclick="window.mpDoCreate()">🚀 创建房间</button>
+                <button class="btn btn-warning" onclick="window.mpShowMainMenu()">返回</button>
             </div>`);
     }
 
@@ -377,8 +324,8 @@
             <div class="waiting-player-list">${list}</div>
             <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:6px 0;">${Lobby.lobbyPlayers.length}/${Lobby.roomConfig.maxPlayers} 人 · 房主可随时开始游戏</div>
             <div class="flex-row mt-12">
-                <button class="btn btn-success flex-grow" onmousedown="event.preventDefault()" onclick="window.mpHostStartGame()">🚀 开始游戏</button>
-                <button class="btn btn-danger" onmousedown="event.preventDefault()" onclick="window.mpHostCloseRoom()">✖ 关闭房间</button>
+                <button class="btn btn-success flex-grow" onclick="window.mpHostStartGame()">🚀 开始游戏</button>
+                <button class="btn btn-danger" onclick="window.mpHostCloseRoom()">✖ 关闭房间</button>
             </div>`);
     }
 
@@ -447,14 +394,14 @@
             <div class="mp-field"><label>输入房间号（6位数字）</label>
                 <div class="flex-row">
                     <input type="text" id="mp-join-code" maxlength="6" placeholder="如 123456" style="letter-spacing:2px;flex:1;">
-                    <button class="btn btn-primary" onmousedown="event.preventDefault()" onclick="window.mpJoinGo()">加入</button>
+                    <button class="btn btn-primary" onclick="window.mpJoinGo()">加入</button>
                 </div>
             </div>
             <div class="section-title" style="margin:10px 0 6px;color:var(--text-secondary);font-size:0.85rem;">🌐 广场公开房间</div>
             <div id="mp-plaza" class="plaza-list"><div class="plaza-empty">加载中…</div></div>
             <div class="flex-row mt-8">
-                <button class="btn btn-warning flex-grow" onmousedown="event.preventDefault()" onclick="window.mpShowMainMenu()">返回</button>
-                <button class="btn btn-outline flex-grow" onmousedown="event.preventDefault()" onclick="window.mpRefreshPlaza()">🔄 刷新广场</button>
+                <button class="btn btn-warning flex-grow" onclick="window.mpShowMainMenu()">返回</button>
+                <button class="btn btn-outline flex-grow" onclick="window.mpRefreshPlaza()">🔄 刷新广场</button>
             </div>`);
         loadPlaza();
     }
@@ -521,7 +468,7 @@
             <div id="mp-guest-roominfo" style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">连接成功，等待房主确认…</div>
             <div class="waiting-player-list" id="mp-guest-list"></div>
             <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:8px 0;">房主开始游戏后将自动进入</div>
-            <button class="btn btn-warning" onmousedown="event.preventDefault()" onclick="window.mpGuestExit()" style="width:100%;">🚪 退出等待</button>`);
+            <button class="btn btn-warning" onclick="window.mpGuestExit()" style="width:100%;">🚪 退出等待</button>`);
     }
 
     function mpGuestExit() {
@@ -574,21 +521,9 @@
 
     // ---------- 初始化大厅入口 ----------
     function init() {
-        // 防重复绑定：如果已初始化过则直接返回（避免脚本重复加载导致事件多次绑定）
-        if (window.__lobbyInitialized) return;
         if (!isLobbyPage()) return;
-        window.__lobbyInitialized = true;
-        const btn = document.getElementById('mp-online-btn');
-        if (btn) {
-            btn.addEventListener('click', function() { askUsername(showMainMenu); });
-        }
-        const localBtn = document.getElementById('mp-local-btn');
-        if (localBtn) {
-            localBtn.addEventListener('click', function() {
-                saveLocalSetup();
-                window.location.href = 'game_local.html';
-            });
-        }
+        // 大厅按钮已在 HTML 中用 inline onclick 绑定（window.lobbyStartOnline / window.lobbyStartLocal），
+        // 此处不做任何 addEventListener，避免重复绑定
     }
 
     function saveLocalSetup() {
