@@ -298,6 +298,8 @@
         try {
             const resp = await fetch(KV_BASE, { signal: ctrl.signal });
             clearTimeout(timer);
+            // 404 = bucket 不存在 = 暂无公开房间，不是错误
+            if (resp.status === 404) return [];
             if (!resp.ok) throw new Error('kv unavailable');
             const keys = await resp.json();
             const rooms = [];
@@ -310,7 +312,7 @@
             return rooms;
         } catch (e) {
             clearTimeout(timer);
-            return null;
+            return null; // 真正的网络错误才返回 null
         }
     }
     window.lobbyFetchPlaza = fetchPlaza;
