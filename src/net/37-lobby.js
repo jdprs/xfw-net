@@ -59,6 +59,9 @@
         let ov = document.getElementById('mp-overlay');
         if (ov) return ov;
         ov = el('div', 'mp-overlay');
+        // v10.1 修复: 必须设置 id，否则 closeOverlay 用 getElementById 找不到，
+        // 导致「返回单机设置/返回主页」无法关闭遮罩，回不到主页
+        ov.id = 'mp-overlay';
         // 与游戏内 password-modal 完全一致：z-index 2001 + backdrop-filter
         ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);overflow-y:auto;padding:16px;';
         document.body.appendChild(ov);
@@ -91,6 +94,36 @@
     function esc(s) {
         return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
+
+    // ---------- 加载动画浮层（v10.1：网络操作期间给出明确反馈，避免“以为点不动”） ----------
+    let _loadingEl = null;
+    function showLoading(text) {
+        hideLoading();
+        const ov = document.createElement('div');
+        ov.id = 'mp-loading-overlay';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:3000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(3px);';
+        ov.innerHTML = '<div class="mp-loader"></div><div class="mp-loading-text" id="mp-loading-text">' + esc(text || '加载中…') + '</div>';
+        document.body.appendChild(ov);
+        _loadingEl = ov;
+    }
+    function hideLoading() {
+        if (_loadingEl) { _loadingEl.remove(); _loadingEl = null; }
+    }
+    function updateLoadingText(text) {
+        const t = document.getElementById('mp-loading-text');
+        if (t) t.textContent = text;
+    }
+    window.mpShowLoading = showLoading;
+    window.mpHideLoading = hideLoading;
+    window.mpUpdateLoadingText = updateLoadingText;
+
+    // ---------- 返回主页（大厅 overlay 内使用） ----------
+    function mpGoHome() {
+        try { if (typeof netClose === 'function') netClose(); } catch(e) {}
+        stopTimers();
+        location.href = 'index.html';
+    }
+    window.mpGoHome = mpGoHome;
 
     // ---------- 用户名 ----------
     function askUsername(next) {
@@ -131,7 +164,8 @@
                 <button class="btn btn-success flex-grow" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
                 <button class="btn btn-primary flex-grow" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
             </div>
-            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>`);
+            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>
+            <button class="btn btn-outline" onclick="window.mpGoHome()" style="width:100%;margin-top:6px;">🏠 返回主页</button>`);
     }
 
     function mpChangeUsername() {
@@ -207,7 +241,7 @@
             };
             Lobby.lobbyPlayers = [{ peerId: 'HOST', name: Lobby.username, isHost: true, online: true }];
 
-            toast('正在创建房间…', 'info', '⏳');
+            showLoading('正在创建房间，连接信令服务器…');
             await netHostCreate(code, signal);
 
             Net.onMessage = handleHostMessage;
@@ -224,8 +258,10 @@
             Lobby.mySeatId = 0;
             if (publicRoom) await publishRoom();
             startHostCountdown();
+            hideLoading();
             renderHostWait();
         } catch (e) {
+            hideLoading();
             console.error('create room error:', e);
             toast('创建房间失败：' + ((e && e.type) ? e.type : (e.message || '网络错误')), 'error', '❌');
         }
@@ -330,6 +366,8 @@
             });
             localStorage.setItem('xfw_room_config', JSON.stringify(cfg));
             netBroadcastRaw({ type: 'start_game' });
+            // 进入联机页前显示加载动画，避免“以为点不动”
+            showLoading('正在进入游戏…');
             window.location.href = 'game_connect_master.html';
         } catch (e) {
             console.error('start game error:', e);
@@ -442,16 +480,18 @@
     async function mpJoinByCode(code) {
         if (Lobby.joining) return;
         Lobby.joining = true;
+        showLoading('正在连接房间 ' + code + ' …');
         // 自动遍历所有公共信令服务器（房主可能用了任意一个）
         const servers = (window.SIGNAL_SERVERS || []).filter(function(s) { return !s.custom; });
         let lastErr = null;
         for (let i = 0; i < servers.length; i++) {
             const signal = servers[i];
-            toast('正在通过 ' + signal.label + ' 连接房间 ' + code + ' …（' + (i+1) + '/' + servers.length + '）', 'info', '⏳');
+            updateLoadingText('正在通过 ' + signal.label + ' 连接房间 ' + code + ' …（' + (i+1) + '/' + servers.length + '）');
             try {
                 await netPlayerJoin(code, signal, Lobby.username);
                 // 连接成功
                 Net.onMessage = handleGuestMessage;
+                hideLoading();
                 renderGuestWait({ code: code });
                 return;
             } catch (e) {
@@ -461,6 +501,7 @@
             }
         }
         Lobby.joining = false;
+        hideLoading();
         const type = lastErr && lastErr.type;
         let msg = '加入房间失败，请检查房间号或网络';
         if (type === 'peer-unavailable') msg = '房间不存在或房主已离线，请确认房间号';

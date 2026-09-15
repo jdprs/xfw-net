@@ -109,9 +109,18 @@
     function init() {
         const mode = window.GAME_MODE || 'local';
         if (mode === 'master' || mode === 'player') {
-            ensurePanel();
+            // v10.1: 不在页面加载时立即创建聊天框，等游戏真正开始后由
+            // 38-game-sync 调用 chatActivate() 再创建，
+            // 避免浏览器恢复标签页/房间失效时残留聊天框等联机元素。
+            window.Chat.activate = ensurePanel;
         }
     }
+    // 供 38-game-sync 在游戏开始（房主启动 / 玩家收到首个状态）时调用
+    window.chatActivate = function() {
+        if (window.Chat && typeof window.Chat.activate === 'function') {
+            window.Chat.activate();
+        }
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

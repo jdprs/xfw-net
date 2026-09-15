@@ -21,6 +21,56 @@
     function mode() { return window.GAME_MODE || 'local'; }
 
     // ============================================================
+    //  页面级加载浮层（v10.1：玩家端连接/等待期间给出反馈）
+    // ============================================================
+    function showPageLoading(text) {
+        hidePageLoading();
+        const ov = document.createElement('div');
+        ov.id = 'mp-page-loading';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:2600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(3px);';
+        ov.innerHTML = '<div class="mp-loader"></div><div class="mp-loading-text" id="mp-page-loading-text">' + (text || '加载中…') + '</div>';
+        document.body.appendChild(ov);
+    }
+    function hidePageLoading() {
+        const el = document.getElementById('mp-page-loading');
+        if (el) el.remove();
+    }
+    function updatePageLoadingText(text) {
+        const t = document.getElementById('mp-page-loading-text');
+        if (t) t.textContent = text;
+    }
+    window.xfwShowPageLoading = showPageLoading;
+    window.xfwHidePageLoading = hidePageLoading;
+    window.xfwUpdatePageLoadingText = updatePageLoadingText;
+
+    // ============================================================
+    //  返回大厅（v10.1：联机页顶部状态栏按钮 / 结束后返回主页）
+    // ============================================================
+    function xfwReturnHome() {
+        try { if (typeof netClose === 'function') netClose(); } catch(e) {}
+        hidePageLoading();
+        const chatPanel = document.getElementById('chat-panel');
+        if (chatPanel) chatPanel.remove();
+        if (window.Chat) { window.Chat.panel = null; window.Chat.body = null; window.Chat.history = []; }
+        const bar = document.querySelector('.net-status-bar');
+        if (bar) bar.remove();
+        const rr = document.getElementById('net-reconnect-root');
+        if (rr) rr.remove();
+        const ct = document.getElementById('close-timer-overlay');
+        if (ct) ct.remove();
+        const ov = document.getElementById('mp-overlay');
+        if (ov) ov.remove();
+        location.href = 'index.html';
+    }
+    window.xfwReturnHome = xfwReturnHome;
+
+    function goLobbyAfter(msg) {
+        toast(msg || '即将返回大厅', 'warning', '🏠');
+        setTimeout(function() { location.href = 'index.html'; }, 1500);
+    }
+    window.xfwGoLobbyAfter = goLobbyAfter;
+
+    // ============================================================
     //  序列化 / 反序列化
     // ============================================================
     function makeTotalAssetsMethod() {
@@ -301,12 +351,15 @@
         switch (msg.type) {
             case 'join_accepted':
                 Sync.myPlayerId = msg.playerId;
+                updatePageLoadingText('已连接房主，等待游戏开始…');
                 toast(`已进入游戏，你是 ${msg.playerId + 1} 号玩家`, 'success', '🎮');
                 break;
             case 'state_sync':
                 applyState(msg.gameState);
                 if (document.getElementById('game-setup')) document.getElementById('game-setup').style.display = 'none';
                 if (document.getElementById('game-main')) document.getElementById('game-main').style.display = 'block';
+                hidePageLoading();
+                if (window.chatActivate) chatActivate();
                 renderAll();
                 break;
             case 'market_close_timer':
@@ -440,6 +493,7 @@
         buildHostAdminPanel();
         renderAll();
         broadcastState();
+        if (window.chatActivate) chatActivate();
         setTimeout(hostAdvanceTurn, 500);
         toast('游戏已开始！', 'success', '🚀');
     }
@@ -523,7 +577,11 @@
         const m = mode();
         if (m === 'master') {
             const cfg = JSON.parse(localStorage.getItem('xfw_room_config') || '{}');
-            if (!cfg.code) { toast('未找到房间配置', 'error', '❌'); return; }
+            // v10.1: 无房间配置（如浏览器恢复历史标签页）时直接回大厅，不残留开始界面
+            if (!cfg.code) {
+                goLobbyAfter('未找到房间配置，即将返回大厅');
+                return;
+            }
             Sync.seats = (cfg.seats || []).map((s, i) => ({
                 peerId: s.isHost ? 'HOST' : null, name: s.name, isHost: s.isHost,
                 playerId: i, connected: s.isHost ? true : false
@@ -538,17 +596,28 @@
             netHostCreate(cfg.code, cfg.signal).then(() => {
                 Net.onMessage = hostHandleMessage;
                 toast('房间已就绪，等待玩家重连…', 'info', '🔌');
-            }).catch(() => {});
+            }).catch(() => {
+                goLobbyAfter('房间恢复失败，即将返回大厅');
+            });
         } else if (m === 'player') {
             const my = JSON.parse(localStorage.getItem('xfw_myseat') || '{}');
-            if (!my.code) { toast('未找到房间信息，请从大厅加入', 'error', '❌'); return; }
+            // v10.1: 无房间信息（浏览器恢复历史标签页/房间已失效）时直接回大厅
+            if (!my.code) {
+                goLobbyAfter('未找到房间信息，即将返回大厅');
+                return;
+            }
             wrapPlayerActions();
             if (document.getElementById('game-setup')) document.getElementById('game-setup').style.display = 'none';
+            showPageLoading('正在连接房主…');
             const signal = (window.SIGNAL_SERVERS || [])[0];
             netPlayerJoin(my.code, signal, my.yourName).then(() => {
                 Net.onMessage = playerHandleMessage;
+                updatePageLoadingText('已连接房主，等待游戏开始…');
                 toast('已连接房主，等待游戏开始…', 'info', '🔌');
-            }).catch(() => {});
+            }).catch(() => {
+                hidePageLoading();
+                goLobbyAfter('无法连接房主（房间可能已关闭），即将返回大厅');
+            });
         }
     }
     window.xfwBootSync = boot;
