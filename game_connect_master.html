@@ -20,6 +20,7 @@
         <span class="net-status-dot connecting" id="net-status-dot"></span>
         <span id="net-status-text">连接中…</span>
         <span class="net-status-room" id="net-room-label">🏠 房主房间</span>
+        <button class="btn btn-warning btn-sm net-home-btn" id="net-home-btn" onclick="window.xfwReturnHome()">🏠 返回大厅</button>
     </div>
     <div class="container">
         <!-- ===== 头部（v9.1 移除"一周年特别版"） ===== -->
@@ -39,123 +40,25 @@
         <!-- ===== 保存通知 ===== -->
         <div id="save-notification" class="save-notification">✅ 已保存</div>
 
-        <!-- ===== 密码模态框 ===== -->
-        <div class="password-modal" id="password-modal">
-            <div class="password-box">
-                <h3>🔐 输入密码</h3>
-                <input type="password" id="admin-password-input" placeholder="请输入密码" autofocus />
-                <div class="btn-row">
-                    <button class="btn btn-success" id="admin-pw-confirm">确认</button>
-                    <button class="btn btn-warning" id="admin-pw-cancel">取消</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== 设置界面 ===== -->
-        <div class="game-setup" id="game-setup">
-            <h2>🎮 游戏设置</h2>
-            <div class="setup-item">
-                <label>真人玩家数量</label>
-                <input type="number" id="human-players" min="1" max="4" value="1" />
-                <div class="setup-note">1~3人</div>
-            </div>
-            <div class="setup-item">
-                <label>场内AI玩家数量</label>
-                <input type="number" id="ai-players" min="0" max="3" value="1" />
-                <div class="setup-note">0~2个（总玩家不超过6）</div>
-            </div>
-            <div class="setup-item">
-                <label>游戏总轮数</label>
-                <input type="number" id="total-rounds" min="10" max="200" value="60" />
-                <div class="setup-note">10~200轮</div>
-            </div>
-
-            <!-- 外接AI配置 -->
-            <div class="external-ai-section">
-                <div class="section-title">🌐 外接AI配置 <span style="font-size:0.7rem;color:var(--text-secondary);font-weight:400;">（独立于场内AI）</span></div>
-                <div class="external-ai-list" id="external-ai-list"><div style="color:var(--text-secondary);font-size:0.85rem;padding:8px 0;opacity:0.6;">暂无外接AI，点击下方添加</div></div>
-                <button class="btn-add-eai" id="add-external-ai-btn">➕ 添加外接AI</button>
-                <div class="setup-note" style="margin-top:6px;">外接AI支持指令模式（复制粘贴）或API模式（自动调用）</div>
-            </div>
-
-            <!-- ===== 管理员面板 ===== -->
-            <div class="admin-panel" id="admin-panel">
-                <h3>🔧 高级设置</h3>
-                <div class="admin-tabs">
-                    <button class="active" data-tab="tab-basic">📋 基础</button>
-                    <button data-tab="tab-stock">📊 股票</button>
-                    <button data-tab="tab-lottery">🎫 彩票</button>
-                    <button data-tab="tab-achievement">🏅 成就</button>
-                    <button data-tab="tab-darkhorse">🐴 黑马股</button>
-                    <!-- v9.1: 新增破产设置选项卡 -->
-                    <button data-tab="tab-bankruptcy">💰 破产</button>
-                </div>
-
-                <div class="admin-tab-content active" id="tab-basic">
-                    <div class="admin-row"><label>初始资金 <input type="number" id="admin-init-money" value="5000" step="100" /></label></div>
-                    <div class="admin-row"><label>银行初始 <input type="number" id="admin-bank-money" value="200000" step="1000" /></label></div>
-                    <div class="admin-row"><label>掠夺阈值 <input type="number" id="admin-loot-threshold" value="8000" step="500" /></label></div>
-                    <div class="admin-row"><label>掠夺比例% <input type="number" id="admin-loot-ratio" value="15" step="1" min="1" max="50" /></label></div>
-                    <div class="admin-row"><label>波动性缩放 <input type="number" id="admin-volatility-scale" value="1.0" step="0.1" min="0.5" max="2.0" /></label></div>
-                    <div class="admin-row"><label>算法模式 <select id="admin-algo-mode"><option value="标准">标准</option><option value="平稳">平稳</option><option value="剧烈">剧烈</option></select></label></div>
-                    <div class="admin-row"><label>横幅停留(秒) <input type="number" id="admin-banner-duration" value="4" step="0.5" min="1" max="15" /></label></div>
-                    <div class="admin-row"><label>AI思考下限(秒) <input type="number" id="admin-ai-think-min" value="4" step="0.5" min="1" max="12" /></label></div>
-                    <div class="admin-row"><label>AI思考上限(秒) <input type="number" id="admin-ai-think-max" value="8" step="0.5" min="2" max="15" /></label></div>
-                    <div class="admin-row"><label>每股初始价格 <input type="number" id="admin-share-price" value="100" step="10" min="10" /></label></div>
-                </div>
-
-                <div class="admin-tab-content" id="tab-stock">
-                    <div class="admin-chart-style">
-                        <label>📊 股票涨跌统计图形式
-                            <select id="admin-chart-type">
-                                <option value="line" selected>折线图</option>
-                                <option value="bar">柱状图</option>
-                            </select>
-                        </label>
-                    </div>
-                    <div class="admin-stock-grid" id="admin-stock-grid"></div>
-                </div>
-
-                <div class="admin-tab-content" id="tab-lottery">
-                    <div class="admin-row"><label>彩票中奖率缩放 <input type="number" id="admin-lottery-win-scale" value="1.0" step="0.1" min="0.1" max="3.0" /></label></div>
-                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:4px;">缩放所有彩票的中奖概率，值越大越容易中奖</div>
-                </div>
-
-                <div class="admin-tab-content" id="tab-achievement">
-                    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">每个成就达成时玩家获得对应奖励金额，可单独调整</div>
-                    <div class="admin-achievement-grid" id="admin-achievement-grid"></div>
-                </div>
-
-                <div class="admin-tab-content" id="tab-darkhorse">
-                    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">🐴 黑马股：每轮随机一只股票成为黑马，涨跌幅乘以倍率</div>
-                    <div class="admin-row"><label>黑马股倍率 <input type="number" id="admin-darkhorse-multiplier" value="2.0" step="0.1" min="1.2" max="4.0" /></label></div>
-                    <div class="admin-row"><label>黑马股出现概率 <input type="number" id="admin-darkhorse-prob" value="0.35" step="0.05" min="0.05" max="1.0" /></label></div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">概率为每轮黑马股出现的几率，倍率影响涨跌幅度</div>
-                </div>
-
-                <!-- v9.1: 破产设置面板 -->
-                <div class="admin-tab-content" id="tab-bankruptcy">
-                    <div class="admin-bankruptcy-section">
-                        <div class="section-label">💰 破产与救助设置</div>
-                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:6px;">收盘时自动检测所有玩家，总资产低于阈值即破产，并发放救助金</div>
-                        <div class="admin-row"><label>破产阈值（元） <input type="number" id="admin-bankruptcy-threshold" value="100" step="10" min="10" max="500" /></label></div>
-                        <div class="admin-row"><label>破产救助金（元） <input type="number" id="admin-bankruptcy-fund" value="1000" step="100" min="100" max="5000" /></label></div>
-                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">总资产低于阈值时判定破产，自动发放救助金（可继续游戏）</div>
-                    </div>
-                </div>
-
-                <button class="btn btn-primary btn-sm" id="apply-admin-btn" style="margin-top:8px;">应用设置</button>
-                <div class="setup-note">高级设置已激活，调整后新游戏生效，规则实时同步</div>
-            </div>
-
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
-                <button class="btn btn-gold" id="load-save-btn" style="display:none;">📂 读取存档</button>
-                <button class="btn btn-success" id="mp-local-btn">🎮 单机开始</button>
-                <button class="btn btn-primary" id="mp-online-btn">🌐 联机开始</button>
-                <button class="btn btn-primary btn-sm" id="help-btn-setup">❓ 帮助</button>
-                <!-- 隐藏的兼容按钮（事件绑定需要），单机/联机均跳转独立页面 -->
-                <button class="btn btn-success" id="start-game-btn" style="display:none;">🚀 开始新游戏</button>
-            </div>
+        <!-- ================================================================
+        联机页无开始界面（v10.1）：
+        以下 #game-setup 仅保留引擎初始化所需的隐藏配置输入，
+        不渲染任何“游戏设置/单机开始/联机开始”等开始界面元素。
+        玩家/房主进入页面后直接进入联机流程，通过顶部状态栏返回大厅。
+        ================================================================ -->
+        <div class="game-setup" id="game-setup" style="display:none;">
+            <input type="number" id="human-players" value="1" />
+            <input type="number" id="ai-players" value="0" />
+            <input type="number" id="total-rounds" value="60" />
+            <input type="number" id="admin-banner-duration" value="4" />
+            <input type="number" id="admin-ai-think-min" value="4" />
+            <input type="number" id="admin-ai-think-max" value="8" />
+            <select id="admin-chart-type"><option value="line">line</option></select>
+            <input type="number" id="admin-darkhorse-multiplier" value="2.0" />
+            <input type="number" id="admin-darkhorse-prob" value="0.35" />
+            <input type="number" id="admin-share-price" value="100" />
+            <input type="number" id="admin-bankruptcy-threshold" value="100" />
+            <input type="number" id="admin-bankruptcy-fund" value="1000" />
         </div>
 
         <!-- ===== 游戏主界面 ===== -->
