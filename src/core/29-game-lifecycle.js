@@ -338,6 +338,16 @@
 
         function backToSetup() {
             gameActive = false;
+            // v10.1: 联机模式（房主/玩家页）没有设置界面，直接返回大厅主页
+            if (window.GAME_MODE === 'master' || window.GAME_MODE === 'player') {
+                if (typeof window.xfwReturnHome === 'function') {
+                    window.xfwReturnHome();
+                } else {
+                    try { if (window.netClose) netClose(); } catch(e) {}
+                    location.href = 'index.html';
+                }
+                return;
+            }
             if (aiThinkTimer) {
                 clearInterval(aiThinkTimer);
                 aiThinkTimer = null;

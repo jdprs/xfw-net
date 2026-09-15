@@ -1,6 +1,15 @@
 //  16. 决策系统（核心）
         //  v9.1 保留取消决策按钮
+        // v10.1: 联机模式下仅本人卡片可发起/完成/取消决策，他人卡片只读
         // ================================================================
+
+        function isOnlineMode() {
+            return window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
+        }
+        function canOperateCard(p) {
+            if (!isOnlineMode()) return true;
+            return !!window.Sync && p.id === Sync.myPlayerId;
+        }
 
         function resetDecisionState() {
             decisionState = 'idle';
@@ -58,6 +67,11 @@
         }
 
         function cancelDecision(playerId) {
+            // v10.1: 联机模式下只能取消自己的回合
+            if (isOnlineMode() && (!window.Sync || playerId !== Sync.myPlayerId)) {
+                showBanner('现在不是你的回合，请等待轮到你', 'warning', null, '⏳ 等待中');
+                return;
+            }
             if (decisionState !== 'deciding' || decidingPlayerId !== playerId) {
                 showBanner('当前没有可取消的决策', 'warning', null, '⚠️ 操作无效');
                 return;
@@ -105,6 +119,11 @@
         }
 
         function startDecision(playerId) {
+            // v10.1: 联机模式下只能操作自己的回合
+            if (isOnlineMode() && (!window.Sync || playerId !== Sync.myPlayerId)) {
+                showBanner('现在不是你的回合，请等待轮到你', 'warning', null, '⏳ 等待中');
+                return;
+            }
             if (decisionState !== 'idle') {
                 showBanner('当前有其他玩家正在决策，请等待', 'warning', null, '⏳ 等待中');
                 return;
@@ -184,6 +203,11 @@
         }
 
         function completeDecision(playerId) {
+            // v10.1: 联机模式下只能完成自己的回合
+            if (isOnlineMode() && (!window.Sync || playerId !== Sync.myPlayerId)) {
+                showBanner('现在不是你的回合，请等待轮到你', 'warning', null, '⏳ 等待中');
+                return;
+            }
             if (decisionState !== 'deciding' || decidingPlayerId !== playerId) {
                 showBanner('当前没有活跃的决策', 'warning', null, '⚠️ 操作无效');
                 return;
@@ -278,6 +302,7 @@
             let status = playerDecisionStatus[p.id] || 'pending';
             let isDeciding = (decidingPlayerId === p.id);
             let isIdle = (decisionState === 'idle');
+            const operable = canOperateCard(p);
 
             if (p.bankrupt) {
                 return `<span class="decision-status">💀 已破产</span>`;
@@ -288,6 +313,10 @@
             }
 
             if (isDeciding) {
+                // v10.1: 联机模式下，正在决策的不是本人时只读展示
+                if (!operable) {
+                    return `<span class="decision-status active">⏳ ${p.name} 决策中...</span>`;
+                }
                 if (p.isAI || p.isExternal) {
                     return `
                             <span class="decision-status active">⏳ 决策中...</span>
@@ -304,6 +333,11 @@
 
             if (decisionState === 'deciding') {
                 return `<span class="decision-status waiting">⏳ 等待 ${players.find(p2=>p2.id===decidingPlayerId)?.name || '其他玩家'} 决策...</span>`;
+            }
+
+            // v10.1: 联机模式下，非本人卡片不显示「决策」按钮，仅提示等待
+            if (!operable) {
+                return `<span class="decision-status waiting">⏳ 等待轮到你...</span>`;
             }
 
             return `<button class="btn-decision" data-action="start">🎯 决策</button>`;

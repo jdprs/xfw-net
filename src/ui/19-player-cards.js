@@ -21,6 +21,11 @@
             card.className = classes;
             card.dataset.playerId = p.id;
 
+            // v10.1: 联机模式下（房主/玩家）只能操作自己的卡片，
+            // 其他人的卡片只读展示，等轮到自己再操作，避免误操作他人资产
+            const onlineMode = window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
+            const isMine = !onlineMode || (!!window.Sync && p.id === Sync.myPlayerId);
+
             let total = p.totalAssets();
             let cash = Math.round(p.cash);
 
@@ -62,7 +67,7 @@
             let ratingDisplay = `<span class="rating-badge rating-${rating}">⭐ ${rating}</span>`;
 
             let predictBtn = '';
-            if (isHuman && !p.bankrupt && gameActive) {
+            if (isHuman && !p.bankrupt && gameActive && isMine) {
                 let alreadyPred = !!predictionsThisRound[p.id];
                 let disabled = alreadyPred || decisionState !== 'deciding' || decidingPlayerId !== p.id;
                 let isMyTurn = (decisionState === 'deciding' && decidingPlayerId === p.id);
@@ -73,9 +78,9 @@
                     `<button class="btn-predict" id="predict-btn-${p.id}" ${disabled ? 'disabled' : ''}>🔮 ${alreadyPred ? '已预测' : '预测'}</button>${undoBtn}`;
             }
 
-            // v9.1: 破产救助按钮（已由收盘自动处理，但保留手动救助作为备选）
+            // v9.1: 破产救助按钮（联机模式下仅房主可操作，且会广播同步）
             let bailoutBtn = '';
-            if (p.bankrupt && gameActive) {
+            if (p.bankrupt && gameActive && (!onlineMode || window.GAME_MODE === 'master')) {
                 bailoutBtn = `
                         <button class="btn-bailout" data-pid="${p.id}" data-action="bailout">💰 救助</button>
                     `;
@@ -83,6 +88,18 @@
 
             let investHtml = '';
             if (isHuman && !p.bankrupt && gameActive) {
+                // v10.1: 联机模式下非本人的卡片只读展示，等待轮到自己
+                if (onlineMode && !isMine) {
+                    investHtml = `
+                        <div class="invest-section">
+                            <div class="section-label">
+                                <span>🔒 查看模式 · 轮到他操作时自动开放</span>
+                                <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                                    <button class="btn-sm btn-sm-gold achievement-btn" data-pid="${p.id}" style="font-size:0.7rem;">🏅 成就馆</button>
+                                </div>
+                            </div>
+                        </div>`;
+                } else {
                 let stockControls = ['A', 'B', 'C', 'D'].map(s => {
                     let cls = `stock-${s.toLowerCase()}-color`;
                     let isDark = currentDarkHorse && currentDarkHorse.key === s;
@@ -91,7 +108,7 @@
                     let sealed = isStockSealed(s);
                     let sealedTag = sealed ? ' 🚫已跑路' : '';
                     let price = stocks[s].price;
-                    let disabled = sealed || decisionState !== 'deciding' || decidingPlayerId !== p.id;
+                    let disabled = sealed || decisionState !== 'deciding' || decidingPlayerId !== p.id || !isMine;
                     let priceText = sealed ? '暂停交易' : `(${fmt(price)})`;
                     return `<div class="stock-control-row" style="${sealed ? 'opacity:0.55;' : ''}">
                             <span class="sname ${cls}">${stocks[s].name}${darkTag}${sealedTag} <span class="badge badge-${s.toLowerCase()}">${s==='A'?'成长':s==='B'?'周期':s==='C'?'科技':'蓝筹'}</span> ${priceText}</span>
@@ -112,7 +129,7 @@
                     if (cs.creatorId === p.id) return '';
                     let isDark = currentDarkHorse && currentDarkHorse.key === `custom_${cs.id}`;
                     let darkTag = isDark ? ' 🐴' : '';
-                    let disabled = decisionState !== 'deciding' || decidingPlayerId !== p.id;
+                    let disabled = decisionState !== 'deciding' || decidingPlayerId !== p.id || !isMine;
                     return `<div class="stock-control-row">
                             <span class="sname stock-custom-color">${cs.name}${darkTag} <span class="badge badge-custom">自建</span></span>
                             <div class="amt-group">
@@ -141,11 +158,12 @@
                             ${stockControls}
                             ${customControls ? `<div style="margin-top:4px;border-top:1px solid var(--border-color);padding-top:4px;">${customControls}</div>` : ''}
                             <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">
-                                <button class="btn-sm btn-sm-gold create-stock-btn" data-pid="${p.id}" ${decisionState !== 'deciding' || decidingPlayerId !== p.id ? 'disabled' : ''}>✨ 创建自建股</button>
-                                <button class="btn-sm btn-sm-purple buy-lottery-btn" data-pid="${p.id}" ${decisionState !== 'deciding' || decidingPlayerId !== p.id ? 'disabled' : ''}>🎫 买彩票</button>
+                                <button class="btn-sm btn-sm-gold create-stock-btn" data-pid="${p.id}" ${decisionState !== 'deciding' || decidingPlayerId !== p.id || !isMine ? 'disabled' : ''}>✨ 创建自建股</button>
+                                <button class="btn-sm btn-sm-purple buy-lottery-btn" data-pid="${p.id}" ${decisionState !== 'deciding' || decidingPlayerId !== p.id || !isMine ? 'disabled' : ''}>🎫 买彩票</button>
                             </div>
                         </div>
                     `;
+                }
             } else if (isHuman && p.bankrupt) {
                 investHtml = `
                         <div class="invest-section">
@@ -261,6 +279,10 @@
                         if (!p.achievements) initPlayerAchievements(p);
                         addLog(`💰 ${p.name} 获得 ${fmt(fund)} 救助金，已脱离破产！`, 'highlight');
                         showBanner(`💰 ${p.name} 获得 ${fmt(fund)} 救助金！`, 'success', null, '💰 救助成功');
+                        // v10.1: 联机模式下房主救助后广播同步给所有玩家
+                        if (window.GAME_MODE === 'master' && typeof window.xfwBroadcastState === 'function') {
+                            window.xfwBroadcastState();
+                        }
                         updateUI();
                         updatePlayersDisplay();
                         updateLeaderboard();
