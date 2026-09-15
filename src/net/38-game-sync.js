@@ -253,6 +253,7 @@
                 case 'predict': makePrediction(pid, d.stock, d.direction, d.amount); break;
                 case 'undo_predict': undoPrediction(pid); break;
                 case 'complete': completeDecision(pid); break;
+                case 'cancel': cancelDecision(pid); break;
             }
             netSendToPeer(peerId, { type: 'action_accepted' });
         } catch (e) {
@@ -263,7 +264,7 @@
     }
 
     // ============================================================
-    //  房主端：自动推进回合
+    //  房主端：自动推进回合（v10.3：房主先决策 → 房主指定下一位决策者）
     // ============================================================
     function seatConnectedForPlayer(pid) {
         const seat = Sync.seats[pid];
@@ -275,25 +276,63 @@
     function hostAdvanceTurn() {
         if (!Sync.gameStarted || !gameActive) return;
         if (decisionState !== 'idle') return;
+        // 1) 房主先决策（每轮优先）
+        const host = players.find(p => p.id === 0);
+        if (host && !host.bankrupt && playerDecisionStatus[0] !== 'done') {
+            startDecision(0);
+            return;
+        }
+        // 2) 房主已完成 → pending 的 AI/外接自动决策
         for (let i = 0; i < players.length; i++) {
             const p = players[i];
             if (p.bankrupt) continue;
             if (playerDecisionStatus[p.id] === 'done') continue;
             if (p.isAI || p.isExternal) { startDecision(p.id); return; }
-            if (!seatConnectedForPlayer(p.id)) continue;
-            startDecision(p.id);
-            return;
         }
+        // 3) 剩余 pending 真人 → 进入「房主指定」模式
+        const hasPendingHuman = players.some(p => !p.bankrupt && !p.isAI && !p.isExternal && playerDecisionStatus[p.id] !== 'done');
+        if (!hasPendingHuman) return;
+        decisionState = 'host_select';
+        decidingPlayerId = null;
+        updateDecisionUI();
+        broadcastState();
     }
     window.xfwAdvanceTurn = hostAdvanceTurn;
 
+    // v10.3: 房主在 host_select 状态点选下一位决策者（真人玩家）
+    function hostPickNext(pid) {
+        if (!Sync.gameStarted || !gameActive) return;
+        if (decisionState !== 'host_select') return;
+        const p = players.find(x => x.id === pid);
+        if (!p || p.bankrupt) return;
+        if (p.isAI || p.isExternal) return;
+        if (playerDecisionStatus[pid] === 'done') return;
+        startDecision(pid);
+        broadcastState();
+    }
+    window.xfwHostPickNext = hostPickNext;
+
     // 包装核心函数：广播 + 推进
     function wrapHostHooks() {
+        // v10.3: 房主启动某玩家回合后立即广播，玩家端才能知道「轮到自己」
+        const origStart = startDecision;
+        startDecision = function(pid) {
+            const before = decisionState;
+            origStart(pid);
+            if (before !== decisionState) broadcastState();
+        };
         const origMark = markPlayerDone;
         markPlayerDone = function(pid) {
             origMark(pid);
             broadcastState();
             hostAdvanceTurn();
+        };
+        // v10.3: 取消决策后回到「房主指定」状态并广播
+        const origCancel = cancelDecision;
+        cancelDecision = function(pid) {
+            origCancel(pid);
+            broadcastState();
+            setTimeout(hostAdvanceTurn, 300);
         };
         const origReset = resetDecisionState;
         resetDecisionState = function() {
@@ -328,7 +367,8 @@
             buyLottery: (pid, lotteryId, qty) => ['buy_lottery', { lotteryId, qty }],
             makePrediction: (pid, stock, direction, amount) => ['predict', { stock, direction, amount }],
             undoPrediction: (pid) => ['undo_predict', {}],
-            completeDecision: (pid) => ['complete', {}]
+            completeDecision: (pid) => ['complete', {}],
+            cancelDecision: (pid) => ['cancel', {}]
         };
         Object.keys(acts).forEach(fnName => {
             const orig = window[fnName];

@@ -348,6 +348,12 @@
                 }
                 return;
             }
+            // v10.2: 单机游戏页(game_local)的"新游戏/重新开始"统一返回主页 index.html，
+            // 与联机页行为一致，避免停在 game_local 的设置界面
+            if (window.location.pathname.indexOf('game_local') !== -1) {
+                location.href = 'index.html';
+                return;
+            }
             if (aiThinkTimer) {
                 clearInterval(aiThinkTimer);
                 aiThinkTimer = null;

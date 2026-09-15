@@ -23,8 +23,12 @@
 
             // v10.1: 联机模式下（房主/玩家）只能操作自己的卡片，
             // 其他人的卡片只读展示，等轮到自己再操作，避免误操作他人资产
+            // v10.3: 联机模式下只有「轮到本人决策」时卡片才开放操作，
+            // 房主指定前/他人决策中等状态一律只读，操作按钮按需出现
             const onlineMode = window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
-            const isMine = !onlineMode || (!!window.Sync && p.id === Sync.myPlayerId);
+            const isMyTurnNow = onlineMode && gameActive && decisionState === 'deciding'
+                && decidingPlayerId === p.id && (!!window.Sync && p.id === Sync.myPlayerId);
+            const isMine = !onlineMode || isMyTurnNow;
 
             let total = p.totalAssets();
             let cash = Math.round(p.cash);

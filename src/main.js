@@ -72,7 +72,7 @@
                     return;
                 }
                 const s = document.createElement('script');
-                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.1';
+                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.3';
                 s.onload = () => { netIndex++; loadNet(); };
                 s.onerror = () => console.error('Net module load failed: ' + netPaths[netIndex]);
                 document.head.appendChild(s);

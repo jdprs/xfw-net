@@ -6,9 +6,18 @@
         function isOnlineMode() {
             return window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
         }
+        // v10.2: 玩家客户端（player）才拦截非本人操作；房主端（master）是权威引擎，
+        // 需放行 hostAdvanceTurn 驱动的其他玩家回合与 hostOnAction 处理的玩家动作，
+        // 否则轮到玩家2时 startDecision/completeDecision 会被误拦截导致流程卡死
+        function isPlayerClient() {
+            return window.GAME_MODE === 'player';
+        }
+        // v10.3: 联机模式下仅「轮到本人决策」时可操作；
+        // 房主先决策 → 房主指定下一位决策者 → 轮到谁谁才能操作
         function canOperateCard(p) {
             if (!isOnlineMode()) return true;
-            return !!window.Sync && p.id === Sync.myPlayerId;
+            return !!window.Sync && p.id === Sync.myPlayerId
+                && decisionState === 'deciding' && decidingPlayerId === p.id;
         }
 
         function resetDecisionState() {
@@ -67,8 +76,8 @@
         }
 
         function cancelDecision(playerId) {
-            // v10.1: 联机模式下只能取消自己的回合
-            if (isOnlineMode() && (!window.Sync || playerId !== Sync.myPlayerId)) {
+            // v10.2: 仅玩家客户端拦截非本人回合；房主端为权威，处理所有玩家请求
+            if (isPlayerClient() && (!window.Sync || playerId !== Sync.myPlayerId)) {
                 showBanner('现在不是你的回合，请等待轮到你', 'warning', null, '⏳ 等待中');
                 return;
             }
@@ -119,12 +128,13 @@
         }
 
         function startDecision(playerId) {
-            // v10.1: 联机模式下只能操作自己的回合
-            if (isOnlineMode() && (!window.Sync || playerId !== Sync.myPlayerId)) {
+            // v10.2: 仅玩家客户端拦截非本人回合；房主端为权威，驱动/处理所有玩家回合
+            if (isPlayerClient() && (!window.Sync || playerId !== Sync.myPlayerId)) {
                 showBanner('现在不是你的回合，请等待轮到你', 'warning', null, '⏳ 等待中');
                 return;
             }
-            if (decisionState !== 'idle') {
+            // v10.3: 允许从 host_select（房主指定中）直接开始指定玩家的回合
+            if (decisionState !== 'idle' && decisionState !== 'host_select') {
                 showBanner('当前有其他玩家正在决策，请等待', 'warning', null, '⏳ 等待中');
                 return;
             }
@@ -203,8 +213,8 @@
         }
 
         function completeDecision(playerId) {
-            // v10.1: 联机模式下只能完成自己的回合
-            if (isOnlineMode() && (!window.Sync || playerId !== Sync.myPlayerId)) {
+            // v10.2: 仅玩家客户端拦截非本人回合；房主端为权威，处理所有玩家完成请求
+            if (isPlayerClient() && (!window.Sync || playerId !== Sync.myPlayerId)) {
                 showBanner('现在不是你的回合，请等待轮到你', 'warning', null, '⏳ 等待中');
                 return;
             }
@@ -296,6 +306,31 @@
             });
             updateCloseMarketButton();
             updateEndGameButton();
+
+            // v10.3: 房主端「指定下一位决策者」选择器——房主先决策，
+            // 完成后由房主点选下一位真人玩家（AI/外接自动决策，无需指定）
+            let hostSel = document.getElementById('host-next-selector');
+            if (isOnlineMode() && window.GAME_MODE === 'master' && decisionState === 'host_select') {
+                if (!hostSel) {
+                    hostSel = document.createElement('div');
+                    hostSel.id = 'host-next-selector';
+                    hostSel.className = 'host-admin-panel';
+                    const pc = document.getElementById('players-container');
+                    if (pc && pc.parentNode) pc.parentNode.insertBefore(hostSel, pc.nextSibling);
+                }
+                if (hostSel.parentNode) {
+                    const pending = players.filter(p => !p.bankrupt && !p.isAI && !p.isExternal && playerDecisionStatus[p.id] !== 'done');
+                    hostSel.innerHTML = '<h3>🎯 指定下一位决策者</h3>' +
+                        (pending.length
+                            ? pending.map(p => `<button class="btn btn-outline" data-host-pick="${p.id}" style="margin:4px;">${p.name}</button>`).join('')
+                            : `<span style="color:var(--text-secondary);">所有玩家已完成决策，可以收盘</span>`);
+                    hostSel.querySelectorAll('[data-host-pick]').forEach(b => {
+                        b.onclick = () => { if (window.xfwHostPickNext) window.xfwHostPickNext(parseInt(b.dataset.hostPick, 10)); };
+                    });
+                }
+            } else if (hostSel) {
+                hostSel.remove();
+            }
         }
 
         function buildDecisionHTML(p) {
@@ -335,8 +370,15 @@
                 return `<span class="decision-status waiting">⏳ 等待 ${players.find(p2=>p2.id===decidingPlayerId)?.name || '其他玩家'} 决策...</span>`;
             }
 
-            // v10.1: 联机模式下，非本人卡片不显示「决策」按钮，仅提示等待
-            if (!operable) {
+            // v10.3: 房主已完成决策、等待房主指定下一位决策者
+            if (decisionState === 'host_select') {
+                return `<span class="decision-status waiting">⏳ 等待房主指定下一位决策者...</span>`;
+            }
+
+            // v10.2: 联机模式下 idle 不渲染「决策」按钮——回合由房主自动推进，
+            // 轮到本人时（decidingPlayerId===自己）自动变为「✅ 完成决策」，
+            // 避免在未轮到时提前点击造成两端状态冲突
+            if (!operable || isOnlineMode()) {
                 return `<span class="decision-status waiting">⏳ 等待轮到你...</span>`;
             }
 
