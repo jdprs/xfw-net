@@ -28,7 +28,9 @@
         const ov = document.createElement('div');
         ov.id = 'mp-page-loading';
         ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:2600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(3px);';
-        ov.innerHTML = '<div class="mp-loader"></div><div class="mp-loading-text" id="mp-page-loading-text">' + (text || '加载中…') + '</div>';
+        // v10.5: 加载遮罩内提供返回大厅按钮——连接中/失败时状态栏被遮罩挡住，玩家也能随时退出
+        ov.innerHTML = '<div class="mp-loader"></div><div class="mp-loading-text" id="mp-page-loading-text">' + (text || '加载中…') + '</div>' +
+            '<button class="btn btn-warning" id="mp-loading-home" onclick="window.xfwReturnHome()">🏠 返回大厅</button>';
         document.body.appendChild(ov);
     }
     function hidePageLoading() {
@@ -306,6 +308,21 @@
 
     // 包装核心函数：广播 + 推进
     function wrapHostHooks() {
+        // v10.5: 横幅与事件弹窗同步到玩家端（外接AI面板等房主专属内容不同步）
+        const origBanner = showBanner;
+        showBanner = function(message, type, duration, title) {
+            origBanner(message, type, duration, title);
+            try {
+                netBroadcastRaw({ type: 'banner', text: message || '', btype: type || 'info', title: title || '' });
+            } catch (e) {}
+        };
+        const origEventModal = showEventModal;
+        showEventModal = function(evt) {
+            try {
+                if (evt) netBroadcastRaw({ type: 'event_modal', event: { name: evt.name, desc: evt.desc, icon: evt.icon, type: evt.type, stockName: evt.stockName || '市场' } });
+            } catch (e) {}
+            return origEventModal(evt);
+        };
         // v10.3: 房主启动某玩家回合后立即广播，玩家端才能知道「轮到自己」
         const origStart = startDecision;
         startDecision = function(pid) {
@@ -409,6 +426,40 @@
                         if (modal) modal.classList.remove('active');
                         document.body.classList.remove('modal-open');
                     }, 30000);
+                }
+                break;
+            // v10.5: 横幅同步（房主 → 玩家）
+            case 'banner':
+                if (typeof showBanner === 'function') showBanner(msg.text, msg.btype || 'info', null, msg.title || '');
+                break;
+            // v10.5: 随机事件弹窗同步
+            case 'event_modal':
+                if (msg.event && typeof showEventModal === 'function') showEventModal(msg.event);
+                break;
+            // v10.5: 游戏结束（强制结束/最后一轮），同步结果弹窗与横幅
+            case 'game_ended':
+                if (typeof showBanner === 'function') showBanner(msg.forced ? '房主已结束本轮游戏' : '🏁 游戏结束，查看最终排名', msg.forced ? 'warning' : 'info', null, '⏹ 游戏结束');
+                if (msg.winner && typeof document !== 'undefined') {
+                    const wm = document.getElementById('winner-message');
+                    const rl = document.getElementById('ranking-list');
+                    if (wm) wm.innerHTML = msg.winner;
+                    if (rl) {
+                        rl.innerHTML = '';
+                        (msg.rankings || []).forEach((p, i) => {
+                            const div = document.createElement('div');
+                            div.className = 'ranking-item';
+                            const badge = p.achieveCount > 0 ? `<span class="achieve-badge">🏅${p.achieveCount}</span>` : '';
+                            if (p.bankrupt) {
+                                div.innerHTML = `<div><span class="rank-number">💀</span><strong>${p.name}</strong> 破产 ${badge}</div><div>¥0</div>`;
+                            } else {
+                                const tag = p.isAI ? ` (${p.aiStrategy || ''})` : p.isExternal ? ' 🌐' : '';
+                                div.innerHTML = `<div><span class="rank-number">#${i + 1}</span><strong>${p.name}${tag}</strong> ${badge} <span class="rating-badge rating-${p.rating || 'D'}">${p.rating || 'D'}</span></div><div>${p.total}</div>`;
+                            }
+                            rl.appendChild(div);
+                        });
+                    }
+                    const rm = document.getElementById('results-modal');
+                    if (rm) { rm.style.display = 'flex'; document.body.classList.add('modal-open'); }
                 }
                 break;
             case 'action_rejected':
@@ -610,7 +661,8 @@
         };
         const eg = document.getElementById('host-end-game');
         if (eg) eg.onclick = () => {
-            if (typeof endGame === 'function') endGame();
+            // v10.5: 强制结束，玩家端同步「房主已结束本轮游戏」横幅与排名弹窗
+            if (typeof endGame === 'function') endGame(true);
             netBroadcastRaw({ type: 'state_sync', gameState: serializeState() });
         };
     }
@@ -666,6 +718,10 @@
         }
     }
     window.xfwBootSync = boot;
+
+    // v10.5: 暴露消息处理入口（供测试/调试/扩展使用）
+    window.playerHandleMessage = playerHandleMessage;
+    window.hostHandleMessage = hostHandleMessage;
 
     window.onAllModulesLoaded = () => {
         if (typeof window.xfwBootSync === 'function') window.xfwBootSync();

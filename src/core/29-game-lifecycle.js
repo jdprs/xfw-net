@@ -281,7 +281,8 @@
             }
         }
 
-        function endGame() {
+        // v10.5: forced 标记区分「房主强制结束」与「自然打完最后一轮」
+        function endGame(forced) {
             gameActive = false;
             localStorage.removeItem('stockGameSave');
             players.forEach(p => {
@@ -322,6 +323,27 @@
             });
             document.getElementById('results-modal').style.display = 'flex';
             document.body.classList.add('modal-open');
+
+            // v10.5: 联机模式广播结束结果，玩家端同步排名弹窗与横幅
+            if (window.GAME_MODE === 'master' && typeof window.netBroadcastRaw === 'function') {
+                try {
+                    window.netBroadcastRaw({
+                        type: 'game_ended',
+                        forced: !!forced,
+                        winner: msg,
+                        rankings: sorted.map(p => ({
+                            name: p.name, total: Math.round(p.totalAssets()),
+                            isAI: !!p.isAI, isExternal: !!p.isExternal, aiStrategy: p.aiStrategy || '',
+                            rating: p._lastRating || 'D',
+                            achieveCount: p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0,
+                            bankrupt: false
+                        })).concat(players.filter(p => p.bankrupt).map(p => ({
+                            name: p.name, total: 0, bankrupt: true,
+                            achieveCount: p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0
+                        })))
+                    });
+                } catch (e) {}
+            }
         }
 
         // v9.1: 直接结束游戏（确认后调用 endGame）
@@ -331,8 +353,9 @@
                 return;
             }
             showConfirmBanner('确定要直接结束当前游戏吗？所有进度将丢失！', () => {
-                endGame();
-                showBanner('游戏已结束', 'info', null, '⏹ 游戏结束');
+                endGame(true);
+                // v10.5: 横幅经 wrapHostHooks 广播，玩家端显示「房主已结束本轮游戏」
+                showBanner('房主已结束本轮游戏', 'warning', null, '⏹ 游戏结束');
             }, () => {});
         }
 
