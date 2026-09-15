@@ -3,6 +3,8 @@
 
         function renderExternalAIConfigs() {
             let container = document.getElementById('external-ai-list');
+            // 联机页等无配置容器的页面直接跳过，避免 onload 报错
+            if (!container) return;
             container.innerHTML = '';
             if (externalAIConfigs.length === 0) {
                 container.innerHTML =

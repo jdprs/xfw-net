@@ -7,21 +7,25 @@
         let achievementCloseBtn, endGameBtn;
 
         window.onload = function() {
+            const $id = (id) => document.getElementById(id);
+
             // ---- 健康忠告（仅大厅页显示，游戏内页面不重复弹出） ----
             if (!window.GAME_MODE) {
                 showHealthModal();
             }
 
-            // ---- 外接AI配置 ----
-            renderExternalAIConfigs();
+            // ---- 外接AI配置（仅存在配置容器的页面，如大厅/单机设置页） ----
+            if ($id('external-ai-list')) {
+                renderExternalAIConfigs();
+            }
 
-            // ---- 高级设置UI ----
-            renderAdminAchievements();
-            renderAdminStockGrid();
+            // ---- 高级设置UI（仅设置页存在） ----
+            if ($id('admin-achievement-grid')) renderAdminAchievements();
+            if ($id('admin-stock-grid')) renderAdminStockGrid();
 
-            // ---- 存档按钮 ----
-            if (hasSaveData()) {
-                document.getElementById('load-save-btn').style.display = 'inline-block';
+            // ---- 存档按钮（仅设置页存在） ----
+            if (hasSaveData() && $id('load-save-btn')) {
+                $id('load-save-btn').style.display = 'inline-block';
             }
 
             // ---- 日志 ----
@@ -30,38 +34,39 @@
             // ---- 规则（仅用于帮助） ----
             updateGameRulesDisplay();
 
-            // ---- 管理员默认值 ----
-            document.getElementById('admin-banner-duration').value = BANNER_DURATION;
-            document.getElementById('admin-ai-think-min').value = AI_THINK_MIN;
-            document.getElementById('admin-ai-think-max').value = AI_THINK_MAX;
-            document.getElementById('admin-chart-type').value = CHART_TYPE;
-            document.getElementById('admin-darkhorse-multiplier').value = DARK_HORSE_MULTIPLIER;
-            document.getElementById('admin-darkhorse-prob').value = DARK_HORSE_PROB;
-            document.getElementById('admin-share-price').value = INIT_SHARE_PRICE;
+            // ---- 管理员默认值（仅设置页有输入框时写入，缺失则跳过） ----
+            const setValIf = (id, v) => { const el = $id(id); if (el) el.value = v; };
+            setValIf('admin-banner-duration', BANNER_DURATION);
+            setValIf('admin-ai-think-min', AI_THINK_MIN);
+            setValIf('admin-ai-think-max', AI_THINK_MAX);
+            setValIf('admin-chart-type', CHART_TYPE);
+            setValIf('admin-darkhorse-multiplier', DARK_HORSE_MULTIPLIER);
+            setValIf('admin-darkhorse-prob', DARK_HORSE_PROB);
+            setValIf('admin-share-price', INIT_SHARE_PRICE);
             // v9.1: 破产设置默认值
-            document.getElementById('admin-bankruptcy-threshold').value = BANKRUPTCY_THRESHOLD;
-            document.getElementById('admin-bankruptcy-fund').value = BANKRUPTCY_FUND;
+            setValIf('admin-bankruptcy-threshold', BANKRUPTCY_THRESHOLD);
+            setValIf('admin-bankruptcy-fund', BANKRUPTCY_FUND);
 
-            // ---- 获取按钮引用 ----
-            closeMarketBtn = document.getElementById('close-market-btn');
-            newGameBtn = document.getElementById('new-game-btn');
-            startGameBtn = document.getElementById('start-game-btn');
-            loadSaveBtn = document.getElementById('load-save-btn');
-            saveGameBtn = document.getElementById('save-game-btn');
-            restartBtn = document.getElementById('restart-btn');
-            helpBtn = document.getElementById('help-btn');
-            helpBtnSetup = document.getElementById('help-btn-setup');
-            helpCloseBtn = document.getElementById('help-close-btn');
-            helpCopyBtn = document.getElementById('help-copy-btn');
-            toggleLogsBtn = document.getElementById('toggle-logs');
-            togglePanelBtn = document.getElementById('toggle-panel-btn');
-            exportCodeBtn = document.getElementById('export-code-btn');
-            importCodeBtn = document.getElementById('import-code-btn');
-            codeCloseBtn = document.getElementById('code-close-btn');
-            codeCopyBtn = document.getElementById('code-copy-btn');
-            codeImportConfirm = document.getElementById('code-import-confirm-btn');
-            achievementCloseBtn = document.getElementById('achievement-close-btn');
-            endGameBtn = document.getElementById('end-game-btn');
+            // ---- 获取按钮引用（缺失时返回 null，下方按存在性绑定） ----
+            closeMarketBtn = $id('close-market-btn');
+            newGameBtn = $id('new-game-btn');
+            startGameBtn = $id('start-game-btn');
+            loadSaveBtn = $id('load-save-btn');
+            saveGameBtn = $id('save-game-btn');
+            restartBtn = $id('restart-btn');
+            helpBtn = $id('help-btn');
+            helpBtnSetup = $id('help-btn-setup');
+            helpCloseBtn = $id('help-close-btn');
+            helpCopyBtn = $id('help-copy-btn');
+            toggleLogsBtn = $id('toggle-logs');
+            togglePanelBtn = $id('toggle-panel-btn');
+            exportCodeBtn = $id('export-code-btn');
+            importCodeBtn = $id('import-code-btn');
+            codeCloseBtn = $id('code-close-btn');
+            codeCopyBtn = $id('code-copy-btn');
+            codeImportConfirm = $id('code-import-confirm-btn');
+            achievementCloseBtn = $id('achievement-close-btn');
+            endGameBtn = $id('end-game-btn');
 
             // ---- 单机/联机开始按钮补绑定（兼容所有页面，避免按钮点不动） ----
             // index.html 已有 inline onclick，此处仅在未绑定时补充
@@ -96,26 +101,26 @@
                 };
             }
 
-            // ---- 绑定事件 ----
-            closeMarketBtn.addEventListener('click', closeMarket);
-            newGameBtn.addEventListener('click', backToSetup);
-            startGameBtn.addEventListener('click', () => initGame(false));
-            loadSaveBtn.addEventListener('click', () => initGame(true));
-            saveGameBtn.addEventListener('click', () => saveGame(false));
-            restartBtn.addEventListener('click', backToSetup);
-            endGameBtn.addEventListener('click', directEndGame);
+            // ---- 绑定事件（仅绑定存在的按钮，缺失的页面自动跳过） ----
+            if (closeMarketBtn) closeMarketBtn.addEventListener('click', closeMarket);
+            if (newGameBtn) newGameBtn.addEventListener('click', backToSetup);
+            if (startGameBtn) startGameBtn.addEventListener('click', () => initGame(false));
+            if (loadSaveBtn) loadSaveBtn.addEventListener('click', () => initGame(true));
+            if (saveGameBtn) saveGameBtn.addEventListener('click', () => saveGame(false));
+            if (restartBtn) restartBtn.addEventListener('click', backToSetup);
+            if (endGameBtn) endGameBtn.addEventListener('click', directEndGame);
 
-            helpBtn.addEventListener('click', () => {
+            if (helpBtn) helpBtn.addEventListener('click', () => {
                 document.getElementById('help-modal').style.display = 'flex';
                 updateGameRulesDisplay();
             });
-            helpBtnSetup.addEventListener('click', () => {
+            if (helpBtnSetup) helpBtnSetup.addEventListener('click', () => {
                 document.getElementById('help-modal').style.display = 'flex';
                 updateGameRulesDisplay();
             });
-            helpCloseBtn.addEventListener('click', () => document.getElementById('help-modal').style.display = 'none');
+            if (helpCloseBtn) helpCloseBtn.addEventListener('click', () => document.getElementById('help-modal').style.display = 'none');
 
-            helpCopyBtn.addEventListener('click', function() {
+            if (helpCopyBtn) helpCopyBtn.addEventListener('click', function() {
                 let content = document.getElementById('help-content-body');
                 let text = content.textContent;
                 navigator.clipboard.writeText(text).then(() => {
@@ -131,22 +136,22 @@
                 });
             });
 
-            toggleLogsBtn.addEventListener('click', () => {
+            if (toggleLogsBtn) toggleLogsBtn.addEventListener('click', () => {
                 allLogsExpanded = !allLogsExpanded;
                 rebuildLogs();
             });
-            togglePanelBtn.addEventListener('click', toggleLogPanel);
-            exportCodeBtn.addEventListener('click', exportCode);
-            importCodeBtn.addEventListener('click', importCode);
-            codeCloseBtn.addEventListener('click', () => document.getElementById('code-modal').style.display = 'none');
-            codeCopyBtn.addEventListener('click', () => {
+            if (togglePanelBtn) togglePanelBtn.addEventListener('click', toggleLogPanel);
+            if (exportCodeBtn) exportCodeBtn.addEventListener('click', exportCode);
+            if (importCodeBtn) importCodeBtn.addEventListener('click', importCode);
+            if (codeCloseBtn) codeCloseBtn.addEventListener('click', () => document.getElementById('code-modal').style.display = 'none');
+            if (codeCopyBtn) codeCopyBtn.addEventListener('click', () => {
                 let ta = document.getElementById('code-textarea');
                 ta.select();
                 document.execCommand('copy');
                 showBanner('已复制到剪贴板', 'success', null, '📋 复制');
             });
-            codeImportConfirm.addEventListener('click', doImportCode);
-            achievementCloseBtn.addEventListener('click', () => {
+            if (codeImportConfirm) codeImportConfirm.addEventListener('click', doImportCode);
+            if (achievementCloseBtn) achievementCloseBtn.addEventListener('click', () => {
                 document.getElementById('achievement-modal').classList.remove('active');
                 document.body.classList.remove('modal-open');
             });
@@ -159,7 +164,10 @@
             });
 
             // ---- 外接AI ----
-            document.getElementById('add-external-ai-btn').addEventListener('click', addExternalAI);
+            // v10.1: 联机页已删除「添加外接AI」按钮，需判空
+            if ($id('add-external-ai-btn')) {
+                $id('add-external-ai-btn').addEventListener('click', addExternalAI);
+            }
 
             document.getElementById('eai-panel-close').addEventListener('click', closeExternalPanel);
             document.getElementById('eai-panel-close-btn').addEventListener('click', closeExternalPanel);
@@ -223,8 +231,9 @@
                 document.getElementById('eai-response-text').value = '';
             });
 
-            // ---- 密码相关 ----
-            document.getElementById('admin-pw-confirm').onclick = async function() {
+            // ---- 密码相关（仅设置页存在密码模态框，联机页已移除） ----
+            if ($id('password-modal')) {
+                $id('admin-pw-confirm').onclick = async function() {
                 let pw = document.getElementById('admin-password-input').value.trim();
                 let ok = await verifyPassword(pw);
                 if (ok) {
@@ -370,6 +379,7 @@
                 }
                 showBanner('高级参数已保存，规则已同步更新', 'success', null, '✅ 应用设置');
             });
+            } // end if (password-modal) — 联机页无密码模态框，跳过管理员绑定
 
             // ---- 键盘快捷键 ----
             document.addEventListener('keydown', function(e) {
