@@ -92,15 +92,52 @@
 
             let investHtml = '';
             if (isHuman && !p.bankrupt && gameActive) {
-                // v10.1: 联机模式下非本人的卡片只读展示，等待轮到自己
+                // v10.4: 联机模式下非本人卡片显示只读持仓/预测信息——
+                // 房主能查看玩家决策内容但不能影响；玩家也能看其他玩家但不影响进程
                 if (onlineMode && !isMine) {
+                    const roRows = ['A', 'B', 'C', 'D'].map(s => {
+                        const shares = p[`shares${s}`] || 0;
+                        if (shares <= 0) return '';
+                        const price = (stocks[s] && stocks[s].price != null) ? stocks[s].price : 100;
+                        return `<div class="ro-row" style="display:flex;justify-content:space-between;gap:6px;">
+                                <span class="sname stock-${s.toLowerCase()}-color">${stocks[s] ? stocks[s].name : s}</span>
+                                <span class="value">${shares}股 ≈ ${fmt(Math.round(shares * price))}</span>
+                            </div>`;
+                    }).join('');
+                    const roCustom = Object.keys(p.customStockInvestments || {}).map(sid => {
+                        const cs = customStocks[sid];
+                        const amt = p.customStockInvestments[sid] || 0;
+                        if (!cs || amt <= 0) return '';
+                        return `<div class="ro-row" style="display:flex;justify-content:space-between;gap:6px;">
+                                <span class="sname stock-custom-color">${cs.name}</span>
+                                <span class="value">${fmt(amt)}</span>
+                            </div>`;
+                    }).join('');
+                    const pred = predictionsThisRound[p.id];
+                    const predText = pred ? (() => {
+                        const nm = stocks[pred.stock] ? stocks[pred.stock].name : (customStocks[pred.stock] ? customStocks[pred.stock].name : pred.stock);
+                        const dir = pred.direction === 'up' ? '看涨📈' : pred.direction === 'down' ? '看跌📉' : '持平➖';
+                        return `<div class="ro-row" style="display:flex;justify-content:space-between;gap:6px;">
+                                <span class="sname">🔮 ${nm} ${dir}</span>
+                                <span class="value">${fmt(pred.amount)}</span>
+                            </div>`;
+                    })() : '';
+                    const hasHoldings = roRows || roCustom || predText;
                     investHtml = `
                         <div class="invest-section">
                             <div class="section-label">
-                                <span>🔒 查看模式 · 轮到他操作时自动开放</span>
+                                <span>📋 持仓（只读）</span>
                                 <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
                                     <button class="btn-sm btn-sm-gold achievement-btn" data-pid="${p.id}" style="font-size:0.7rem;">🏅 成就馆</button>
                                 </div>
+                            </div>
+                            <div class="readonly-holdings" style="font-size:0.78rem;display:flex;flex-direction:column;gap:3px;">
+                                <div class="ro-row" style="display:flex;justify-content:space-between;gap:6px;">
+                                    <span class="sname">💰 现金</span>
+                                    <span class="value">${fmt(Math.round(p.cash))}</span>
+                                </div>
+                                ${roRows}${roCustom}${predText}
+                                ${hasHoldings ? '' : '<div style="color:var(--text-secondary);">暂无持仓与预测</div>'}
                             </div>
                         </div>`;
                 } else {

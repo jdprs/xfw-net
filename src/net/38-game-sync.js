@@ -282,16 +282,9 @@
             startDecision(0);
             return;
         }
-        // 2) 房主已完成 → pending 的 AI/外接自动决策
-        for (let i = 0; i < players.length; i++) {
-            const p = players[i];
-            if (p.bankrupt) continue;
-            if (playerDecisionStatus[p.id] === 'done') continue;
-            if (p.isAI || p.isExternal) { startDecision(p.id); return; }
-        }
-        // 3) 剩余 pending 真人 → 进入「房主指定」模式
-        const hasPendingHuman = players.some(p => !p.bankrupt && !p.isAI && !p.isExternal && playerDecisionStatus[p.id] !== 'done');
-        if (!hasPendingHuman) return;
+        // 2) 房主已完成 → 全部（含 AI/外接）由房主指定，不再自动决策
+        const hasPending = players.some(p => !p.bankrupt && playerDecisionStatus[p.id] !== 'done');
+        if (!hasPending) return;
         decisionState = 'host_select';
         decidingPlayerId = null;
         updateDecisionUI();
@@ -299,13 +292,12 @@
     }
     window.xfwAdvanceTurn = hostAdvanceTurn;
 
-    // v10.3: 房主在 host_select 状态点选下一位决策者（真人玩家）
+    // v10.4: 房主在 host_select 状态点选下一位决策者（真人/AI/外接均由房主决定）
     function hostPickNext(pid) {
         if (!Sync.gameStarted || !gameActive) return;
         if (decisionState !== 'host_select') return;
         const p = players.find(x => x.id === pid);
         if (!p || p.bankrupt) return;
-        if (p.isAI || p.isExternal) return;
         if (playerDecisionStatus[pid] === 'done') return;
         startDecision(pid);
         broadcastState();
@@ -405,6 +397,19 @@
             case 'market_close_timer':
                 showCloseTimer(msg.duration || 30);
                 setTimeout(hideCloseTimer, (msg.duration || 30) * 1000);
+                break;
+            // v10.4: 收盘总结——所有人强制观看 30 秒后自动消失
+            case 'round_summary':
+                showInfoModal(msg.title || '📊 收盘总结', msg.summary || '', null);
+                {
+                    const ok = document.getElementById('info-modal-ok');
+                    if (ok) ok.style.display = 'none';
+                    setTimeout(function() {
+                        const modal = document.getElementById('info-modal');
+                        if (modal) modal.classList.remove('active');
+                        document.body.classList.remove('modal-open');
+                    }, 30000);
+                }
                 break;
             case 'action_rejected':
                 toast('操作被拒绝：' + msg.reason, 'warning', '⚠️');

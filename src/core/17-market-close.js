@@ -232,7 +232,10 @@
 
             roundEvents[round] = { lotteryWins: [], lotteryScams: [], predictions: [] };
 
-            showInfoModal(`📊 第 ${round} 轮收盘`, summary, function() {
+            // v10.4: 联机模式下收盘总结强制展示 30 秒后自动消失，且广播给所有玩家端同步展示
+            const isOnlineClose = window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
+            const summaryBody = isOnlineClose ? (summary + '\n\n⏳ 30 秒后自动进入下一轮...') : summary;
+            showInfoModal(`📊 第 ${round} 轮收盘`, summaryBody, function() {
                 round++;
                 if (round > totalRounds) {
                     endGame();
@@ -251,6 +254,17 @@
                     showBanner(`📊 第 ${round} 轮开始，请玩家点击「决策」`, 'info', null, '🔄 新轮次');
                 }
             });
+            if (isOnlineClose) {
+                try { if (window.netBroadcastRaw) window.netBroadcastRaw({ type: 'round_summary', round: round, summary: summaryBody }); } catch (e) {}
+                // 强制观看：隐藏确定按钮，30 秒后自动关闭并继续（房主端执行后续轮次推进）
+                const okBtn = document.getElementById('info-modal-ok');
+                if (okBtn) okBtn.style.display = 'none';
+                setTimeout(function() {
+                    const ok = document.getElementById('info-modal-ok');
+                    const modal = document.getElementById('info-modal');
+                    if (ok && modal && modal.classList.contains('active')) ok.click();
+                }, 30000);
+            }
         }
 
         // ================================================================

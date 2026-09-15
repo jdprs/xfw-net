@@ -68,6 +68,14 @@
             achievementCloseBtn = $id('achievement-close-btn');
             endGameBtn = $id('end-game-btn');
 
+            // v10.4: 联机模式下不支持存档码/保存存档（不影响进程的功能才保留）
+            if (window.GAME_MODE === 'master' || window.GAME_MODE === 'player') {
+                ['save-game-btn', 'export-code-btn', 'import-code-btn'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.style.display = 'none'; el.disabled = true; }
+                });
+            }
+
             // ---- 单机/联机开始按钮补绑定（兼容所有页面，避免按钮点不动） ----
             // index.html 已有 inline onclick，此处仅在未绑定时补充
             const mpLocalBtn = document.getElementById('mp-local-btn');

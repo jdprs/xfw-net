@@ -319,10 +319,11 @@
                     if (pc && pc.parentNode) pc.parentNode.insertBefore(hostSel, pc.nextSibling);
                 }
                 if (hostSel.parentNode) {
-                    const pending = players.filter(p => !p.bankrupt && !p.isAI && !p.isExternal && playerDecisionStatus[p.id] !== 'done');
+                    // v10.4: 所有未完成决策的玩家都列入（含 AI/外接），由房主决定下一个决策者
+                    const pending = players.filter(p => !p.bankrupt && playerDecisionStatus[p.id] !== 'done');
                     hostSel.innerHTML = '<h3>🎯 指定下一位决策者</h3>' +
                         (pending.length
-                            ? pending.map(p => `<button class="btn btn-outline" data-host-pick="${p.id}" style="margin:4px;">${p.name}</button>`).join('')
+                            ? pending.map(p => `<button class="btn btn-outline" data-host-pick="${p.id}" style="margin:4px;">${p.isAI ? '🤖 ' : p.isExternal ? '🌐 ' : ''}${p.name}</button>`).join('')
                             : `<span style="color:var(--text-secondary);">所有玩家已完成决策，可以收盘</span>`);
                     hostSel.querySelectorAll('[data-host-pick]').forEach(b => {
                         b.onclick = () => { if (window.xfwHostPickNext) window.xfwHostPickNext(parseInt(b.dataset.hostPick, 10)); };
@@ -387,6 +388,14 @@
 
         function updateCloseMarketButton() {
             let btn = document.getElementById('close-market-btn');
+            if (!btn) return;
+            // v10.4: 进程按钮仅房主可见，玩家端隐藏（只能等待）
+            if (window.GAME_MODE === 'player') {
+                btn.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+            btn.style.display = '';
             if (decisionState === 'all_done') {
                 btn.disabled = false;
                 btn.title = '所有玩家已完成决策';
@@ -402,6 +411,13 @@
         function updateEndGameButton() {
             let btn = document.getElementById('end-game-btn');
             if (!btn) return;
+            // v10.4: 进程按钮仅房主可见，玩家端隐藏
+            if (window.GAME_MODE === 'player') {
+                btn.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+            btn.style.display = '';
             if (gameActive && players.length > 0) {
                 btn.disabled = false;
                 btn.title = '立即结束当前游戏';
