@@ -17,16 +17,26 @@
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 
-    // v10.7: 让网络状态栏浮动在聊天框左上方（聊天框左侧、顶部之上），不遮挡日志
+    // v10.8: 让网络状态栏浮动在聊天框上方——大屏（聊天框右下角）贴其正上方右对齐；
+    // 小屏（聊天框占底部全宽）贴其左上方左对齐。聊天框创建/折叠时联动定位。
     function placeStatusBar() {
         const bar = document.querySelector('.net-status-bar');
         if (!bar) return;
-        bar.style.right = '322px';
+        const isMobile = window.matchMedia('(max-width: 640px)').matches;
         const chat = document.getElementById('chat-panel');
         if (chat) {
             bar.style.bottom = (chat.offsetHeight + 20) + 'px';
         } else {
             bar.style.bottom = '12px';
+        }
+        if (isMobile) {
+            // 小屏：状态栏左缘与全宽聊天框左缘精确对齐（聊天框左上角正上方）
+            bar.style.left = (chat ? chat.offsetLeft : 8) + 'px';
+            bar.style.right = 'auto';
+        } else {
+            // 大屏：状态栏右缘与聊天框右缘对齐（聊天框正上方）
+            bar.style.right = '12px';
+            bar.style.left = 'auto';
         }
     }
     window.placeNetStatusBar = placeStatusBar;

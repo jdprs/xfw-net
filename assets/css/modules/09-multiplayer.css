@@ -3,12 +3,12 @@
    与现有 .btn / .modal-overlay / .modal-box 风格保持一致
    ================================================================ */
 
-/* ---------- 网络状态栏（v10.6：浮动在聊天框左上方，不占顶部、不遮挡日志） ---------- */
+/* ---------- 网络状态栏（v10.8：大屏浮动在聊天框正上方，小屏浮动在聊天框左上方，不占顶部、不遮挡日志） ---------- */
 .net-status-bar {
     position: fixed;
-    right: 322px;      /* 聊天框(300px + 12px 边距)左侧 */
-    bottom: 12px;
-    z-index: 410;      /* 高于聊天框(400) */
+    right: 12px;        /* 与聊天框右缘对齐（大屏：聊天框正上方） */
+    bottom: 12px;       /* 由 placeStatusBar() 按聊天框高度动态覆盖 */
+    z-index: 410;       /* 高于聊天框(400) */
     display: flex;
     align-items: center;
     gap: 8px;
@@ -240,16 +240,10 @@
     .chat-body { height: 160px; }
     .mp-code-display { font-size: 1.5rem; letter-spacing: 0.3em; }
     .net-status-room { display: none; }
-    /* v10.6: 小屏下状态栏回顶部，避免固定右下角与全宽聊天框重叠 */
+    /* v10.8: 小屏下聊天框占底部全宽，状态栏浮动在其左上方（left 与聊天框左缘对齐） */
     .net-status-bar {
-        position: sticky;
-        top: 0;
+        left: 8px;
         right: auto;
-        bottom: auto;
-        max-width: none;
-        border-radius: 0;
-        box-shadow: none;
-        border: none;
-        border-bottom: 1px solid var(--border-color);
+        bottom: 12px;   /* 由 placeStatusBar() 按聊天框高度动态覆盖 */
     }
 }
