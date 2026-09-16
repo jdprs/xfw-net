@@ -1,11 +1,16 @@
 /* ================================================================
  * 37. 大厅与房间系统 (v10.0)
- * 负责：用户名、创建房间、加入房间、广场(kvdb.io)、等待室、倒计时
+ * 负责：用户名、创建房间、加入房间、广场(extendsclass bin)、等待室、倒计时
  * 在 index.html（大厅）以及联机阶段的房主/玩家页面都可加载，
  * 通过检测 DOM 元素是否存在决定是否初始化大厅 UI。
  *
  * v10.0 修复：所有弹窗按钮统一使用 inline onclick + window 全局函数，
  * 避免动态 innerHTML 后 .onclick 赋值失效导致按钮点不动的问题。
+ *
+ * v10.2 修复广场：原 kvdb.io 方案已失效（bucket 名非法 + 现要求邮箱验证，
+ * 匿名公开写入不可用）。改用 extendsclass.com 的一个公开 JSON bin 作为广场：
+ * 整个 bin 固定为 { rooms: { "<6位房间号>": {房间信息, ts} } }，
+ * 房主读-改-写自己的条目并每 20s 心跳刷新 ts，玩家按 ts 过滤僵尸房间。
  * ================================================================
  */
 (() => {
@@ -13,8 +18,9 @@
     if (location.search.indexOf('reset=1') >= 0) {
         try { localStorage.removeItem('xfw_username'); } catch(e) {}
     }
-    const KV_BUCKET = 'xfw-new-rooms';
-    const KV_BASE = 'https://kvdb.io/' + KV_BUCKET;
+    // 广场后端：extendsclass.com 公开 JSON bin（创建时未设 security key，CORS 全开，匿名可读写）。
+    const PLAZA_BIN_URL = 'https://json.extendsclass.com/bin/b419a9ed3a21';
+    const PLAZA_TTL_MS = 90 * 1000; // 房主每 20s 心跳，超过 90s 未刷新视为房间已死
     const WAIT_MAX_SECONDS = 5 * 60; // 5 分钟等待上限
 
     const Lobby = {
@@ -267,46 +273,79 @@
         }
     }
 
-    // ---------- 广场：发布 / 拉取 ----------
+    // ---------- 广场：发布 / 拉取（extendsclass 公开 bin） ----------
+    // 整个 bin 结构：{ rooms: { "<房间号>": {name,host,players,max,ai,extAi,code,ts} } }
+    async function plazaRead() {
+        const resp = await fetch(PLAZA_BIN_URL, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('plaza http ' + resp.status);
+        const j = await resp.json();
+        return (j && typeof j === 'object' && j.rooms) ? j : { rooms: {} };
+    }
+    async function plazaWrite(obj) {
+        const resp = await fetch(PLAZA_BIN_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(obj)
+        });
+        if (!resp.ok) throw new Error('plaza put ' + resp.status);
+    }
+
+    // 房主：把自己的房间写进广场，并每 20s 心跳刷新 ts（顺手清理僵尸房间）
     async function publishRoom() {
+        const cfg = Lobby.roomConfig;
+        if (!cfg || !cfg.publicRoom) return;
         try {
-            const info = {
-                name: Lobby.roomConfig.roomName,
-                host: Lobby.roomConfig.hostName,
-                players: Lobby.lobbyPlayers.length,
-                max: Lobby.roomConfig.maxPlayers,
-                ai: Lobby.roomConfig.aiCount,
-                extAi: Lobby.roomConfig.extAiCount,
-                code: Lobby.roomConfig.code
+            let data;
+            try { data = await plazaRead(); } catch (e) { data = { rooms: {} }; }
+            const now = Date.now();
+            const rooms = data.rooms || {};
+            // 清理心跳过期的僵尸房间
+            for (const c in rooms) {
+                if (!rooms[c].ts || (now - rooms[c].ts) > PLAZA_TTL_MS) delete rooms[c];
+            }
+            rooms[cfg.code] = {
+                name: cfg.roomName, host: cfg.hostName,
+                players: Lobby.lobbyPlayers.length, max: cfg.maxPlayers,
+                ai: cfg.aiCount, extAi: cfg.extAiCount, code: cfg.code, ts: now
             };
-            await fetch(KV_BASE + '/' + Lobby.roomConfig.code + '?ttl=60', {
-                method: 'PUT', body: JSON.stringify(info)
-            });
+            data.rooms = rooms;
+            await plazaWrite(data);
             if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-            Lobby.plazaTimer = setInterval(async function() {
-                try { await fetch(KV_BASE + '/' + Lobby.roomConfig.code + '?ttl=60', { method: 'PUT', body: JSON.stringify(info) }); } catch (e) {}
-            }, 20000);
+            Lobby.plazaTimer = setInterval(publishRoom, 20000);
         } catch (e) {
+            console.warn('publishRoom error:', e);
             toast('广场发布失败，将仅用房间号加入', 'warning', '⚠️');
         }
     }
 
+    // 房主关闭/超时结束时：从广场移除自己的房间
+    async function removeMyRoomFromPlaza() {
+        try {
+            const cfg = Lobby.roomConfig;
+            if (!cfg || !cfg.code) return;
+            const data = await plazaRead();
+            if (data.rooms && data.rooms[cfg.code]) {
+                delete data.rooms[cfg.code];
+                await plazaWrite(data);
+            }
+        } catch (e) { /* 忽略：下次心跳/过期清理也会兜底 */ }
+    }
+
+    // 玩家：拉取广场，只返回仍在心跳（ts 新鲜）的房间
     async function fetchPlaza() {
         const ctrl = new AbortController();
-        const timer = setTimeout(function() { ctrl.abort(); }, 5000);
+        const timer = setTimeout(function() { ctrl.abort(); }, 6000);
         try {
-            const resp = await fetch(KV_BASE, { signal: ctrl.signal });
+            const resp = await fetch(PLAZA_BIN_URL, { signal: ctrl.signal, cache: 'no-store' });
             clearTimeout(timer);
-            // 404 = bucket 不存在 = 暂无公开房间，不是错误
-            if (resp.status === 404) return [];
-            if (!resp.ok) throw new Error('kv unavailable');
-            const keys = await resp.json();
+            if (!resp.ok) throw new Error('plaza http ' + resp.status);
+            const data = await resp.json();
+            const now = Date.now();
             const rooms = [];
-            for (const k of (keys || []).slice(0, 30)) {
-                try {
-                    const r = await fetch(KV_BASE + '/' + k, { signal: ctrl.signal });
-                    if (r.ok) { const j = await r.json(); if (j && j.code) rooms.push(j); }
-                } catch (e) {}
+            const obj = (data && data.rooms) || {};
+            for (const k of Object.keys(obj)) {
+                const r = obj[k];
+                if (r && r.code && r.ts && (now - r.ts) < PLAZA_TTL_MS) rooms.push(r);
             }
             return rooms;
         } catch (e) {
@@ -327,6 +366,7 @@
             if (Lobby.waitSeconds <= 0) {
                 netBroadcastRaw({ type: 'room_closed', reason: '等待超时，房间已关闭' });
                 if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
+                removeMyRoomFromPlaza();
                 toast('等待超时，房间已关闭', 'warning', '⏰');
                 setTimeout(function() { netClose(); closeOverlay(); }, 1500);
             }
@@ -381,6 +421,7 @@
             netBroadcastRaw({ type: 'close_room' });
         } catch (e) {}
         if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
+        removeMyRoomFromPlaza();
         try { netClose(); } catch (e) {}
         closeOverlay();
         toast('房间已关闭', 'info', '🚪');
