@@ -156,6 +156,8 @@
             Net._peerOpened = false;
             Net.masterPeerId = roomPeerId(roomCode);
             const opts = signal && signal.custom ? {} : { host: signal.host, port: signal.port, secure: signal.secure, key: 'peerjs' };
+            // joined 提升到外层：peer.on('error') 也需据此判断是否已真正连到房主
+            let joined = false;
             try {
                 Net.peer = new Peer(Object.keys(opts).length ? opts : undefined);
             } catch (e) { reject(e); return; }
@@ -168,7 +170,6 @@
                 // joined=true 表示 P2P 数据通道已成功 open：此后再收到 close/error 才视为“真正断线”；
                 // 在此之前（如 peer-unavailable、信令打洞失败）必须 reject，让上层切换信令服务器重试，
                 // 绝不能误走 handlePeerDisconnect 把玩家踢回大厅。
-                let joined = false;
                 const timer = setTimeout(() => {
                     if (joined) return;
                     setStatus('连接超时', 'disconnected');
@@ -198,7 +199,10 @@
                 });
             });
             Net.peer.on('error', (err) => {
-                if (Net._peerOpened) {
+                // 已真正连到房主后（joined）的信令抖动才静默；尚未连上时（如 peer-unavailable：
+                // 房主不在当前信令服务器）必须 reject，让上层立刻切换其它信令服务器，
+                // 而不是因为 _peerOpened 就静默吞掉、干等 8 秒超时。
+                if (joined) {
                     const now = Date.now();
                     if (now - Net._lastErrorBanner > 5000) {
                         Net._lastErrorBanner = now;
