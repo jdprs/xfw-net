@@ -519,6 +519,7 @@
         if (Sync._ctTimer) { clearInterval(Sync._ctTimer); Sync._ctTimer = null; }
     }
     window.xfwShowCloseTimer = showCloseTimer;
+    window.xfwHideCloseTimer = hideCloseTimer;
 
     // ============================================================
     //  房主重连等待界面
@@ -648,7 +649,7 @@
                     if (seat && !seat.isHost && seat.peerId) {
                         const muted = !Net.muted.has(seat.peerId);
                         if (muted) Net.muted.add(seat.peerId); else Net.muted.delete(seat.peerId);
-                        netBroadcastRaw({ type: 'mute_player', targetPeerId: seat.peerId, muted });
+                        netBroadcastRaw({ type: 'mute_player', targetPeerId: seat.peerId, muted: muted });
                         toast(muted ? `已禁言 ${players[pid].name}` : `已解除禁言 ${players[pid].name}`, 'info', '🔇');
                     }
                 }
@@ -710,15 +711,27 @@
             Sync.myName = my.yourName || '玩家';
             if (document.getElementById('game-setup')) document.getElementById('game-setup').style.display = 'none';
             showPageLoading('正在连接房主…');
-            const signal = (window.SIGNAL_SERVERS || [])[0];
-            netPlayerJoin(my.code, signal, my.yourName).then(() => {
-                Net.onMessage = playerHandleMessage;
-                updatePageLoadingText('已连接房主，等待游戏开始…');
-                toast('已连接房主，等待游戏开始…', 'info', '🔌');
-            }).catch(() => {
+            // v10.7 修复：与大厅加入策略一致，遍历所有公共信令服务器。
+            // 房主重建游戏页时用的是创建房间时选择的信令服务器（cfg.signal），不一定是 [0]；
+            // 之前硬编码 [0] 会导致房主在其它信令服务器时玩家永远 peer-unavailable、连不上。
+            const servers = (window.SIGNAL_SERVERS || []).filter(function (s) { return !s.custom; });
+            (async () => {
+                for (let i = 0; i < servers.length; i++) {
+                    const signal = servers[i];
+                    updatePageLoadingText('正在通过 ' + signal.label + ' 连接房主…（' + (i + 1) + '/' + servers.length + '）');
+                    try {
+                        await netPlayerJoin(my.code, signal, my.yourName);
+                        Net.onMessage = playerHandleMessage;
+                        updatePageLoadingText('已连接房主，等待游戏开始…');
+                        toast('已连接房主，等待游戏开始…', 'info', '🔌');
+                        return;
+                    } catch (e) {
+                        try { netClose(); } catch (_) {}
+                    }
+                }
                 hidePageLoading();
                 goLobbyAfter('无法连接房主（房间可能已关闭），即将返回大厅');
-            });
+            })();
         }
     }
     window.xfwBootSync = boot;
