@@ -54,7 +54,8 @@
         if (!text) return;
         input.value = '';
         const msg = {
-            playerName: window.Lobby ? window.Lobby.username : '玩家',
+            // v10.6: 玩家端优先用房间内注册名，其次大厅昵称
+            playerName: (window.Sync && window.Sync.myName) ? window.Sync.myName : (window.Lobby ? Lobby.username : '玩家'),
             text: text,
             timestamp: Date.now()
         };
@@ -63,6 +64,8 @@
             netBroadcastRaw({ type: 'chat_message', playerName: msg.playerName, text, timestamp: msg.timestamp });
             append(msg, true);
         } else if (window.GAME_MODE === 'player') {
+            // v10.5: 玩家端先本地显示自己的消息，再发送给房主（房主转发给其他玩家）
+            append(msg, true);
             netSendToMaster({ type: 'chat_message', playerName: msg.playerName, text, timestamp: msg.timestamp });
         }
     }

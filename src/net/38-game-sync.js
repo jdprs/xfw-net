@@ -192,7 +192,9 @@
                     netSendToPeer(peerId, { type: 'muted_notice' });
                     return;
                 }
-                netBroadcastRaw({ type: 'chat_message', fromPeerId: peerId, playerName: msg.playerName, text: msg.text, timestamp: Date.now() });
+                // v10.5: 房主端本地显示玩家消息，并转发给其他玩家（排除发送者，避免其重复显示）
+                if (window.Chat && typeof Chat.append === 'function') Chat.append({ playerName: msg.playerName, text: msg.text, timestamp: Date.now() }, false);
+                netBroadcastRaw({ type: 'chat_message', fromPeerId: peerId, playerName: msg.playerName, text: msg.text, timestamp: Date.now() }, peerId);
                 break;
             }
             case 'mute_player': {
@@ -704,6 +706,8 @@
                 return;
             }
             wrapPlayerActions();
+            // v10.6: 记录玩家名供聊天等展示（玩家页无 Lobby.username）
+            Sync.myName = my.yourName || '玩家';
             if (document.getElementById('game-setup')) document.getElementById('game-setup').style.display = 'none';
             showPageLoading('正在连接房主…');
             const signal = (window.SIGNAL_SERVERS || [])[0];

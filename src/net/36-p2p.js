@@ -83,9 +83,12 @@
     }
     window.netSendToMaster = sendToMaster;
 
-    // 房主端：广播给所有玩家
-    function broadcastRaw(obj) {
-        Net.conns.forEach((conn, pid) => sendRaw(conn, obj));
+    // 房主端：广播给所有玩家（可排除指定 peer，用于聊天等"发送者已本地显示"的场景）
+    function broadcastRaw(obj, excludePeerId) {
+        Net.conns.forEach((conn, pid) => {
+            if (excludePeerId && pid === excludePeerId) return;
+            sendRaw(conn, obj);
+        });
     }
     window.netBroadcastRaw = broadcastRaw;
 
