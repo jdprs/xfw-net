@@ -30,7 +30,8 @@
         _hbTimeoutTimer: null,
         _lastPong: 0,
         _peerOpened: false,   // 标记 peer 是否已经 open（open 后忽略非致命 error，避免疯狂弹 banner 卡死）
-        _lastErrorBanner: 0   // error banner 防抖时间戳
+        _lastErrorBanner: 0,  // error banner 防抖时间戳
+        _disconnectRedirectTimer: null  // 连接建立后断线的“返回大厅”跳转 timer，便于 join 重试时取消
     };
     window.Net = Net;
     window.SIGNAL_SERVERS = SIGNAL_SERVERS;
@@ -164,11 +165,17 @@
                 Net.peerId = pid;
                 const conn = Net.peer.connect(Net.masterPeerId, { reliable: true });
                 Net.masterConn = conn;
+                // joined=true 表示 P2P 数据通道已成功 open：此后再收到 close/error 才视为“真正断线”；
+                // 在此之前（如 peer-unavailable、信令打洞失败）必须 reject，让上层切换信令服务器重试，
+                // 绝不能误走 handlePeerDisconnect 把玩家踢回大厅。
+                let joined = false;
                 const timer = setTimeout(() => {
+                    if (joined) return;
                     setStatus('连接超时', 'disconnected');
                     reject(new Error('timeout'));
                 }, 8000);
                 conn.on('open', () => {
+                    joined = true;
                     clearTimeout(timer);
                     setStatus('已连接房主', 'connected');
                     startHeartbeat();
@@ -177,9 +184,18 @@
                 });
                 conn.on('data', (data) => handleIncoming(Net.masterPeerId, data));
                 conn.on('close', () => {
-                    handlePeerDisconnect(Net.masterPeerId);
+                    if (joined) { handlePeerDisconnect(Net.masterPeerId); return; }
+                    clearTimeout(timer);
+                    const e = new Error('连接已关闭'); e.type = 'conn-closed';
+                    reject(e);
                 });
-                conn.on('error', () => handlePeerDisconnect(Net.masterPeerId));
+                conn.on('error', (err) => {
+                    if (joined) { handlePeerDisconnect(Net.masterPeerId); return; }
+                    clearTimeout(timer);
+                    const e = new Error('连接失败');
+                    e.type = (err && err.type) ? err.type : 'conn-error';
+                    reject(e);
+                });
             });
             Net.peer.on('error', (err) => {
                 if (Net._peerOpened) {
@@ -221,7 +237,8 @@
         } else {
             setStatus('与房主断开', 'disconnected');
             if (typeof showBanner === 'function') showBanner('与房主断开连接，返回大厅', 'error', 5000, '📡 断线');
-            setTimeout(() => { window.location.href = 'index.html'; }, 2500);
+            if (Net._disconnectRedirectTimer) clearTimeout(Net._disconnectRedirectTimer);
+            Net._disconnectRedirectTimer = setTimeout(() => { window.location.href = 'index.html'; }, 2500);
         }
     }
     window.netHandlePeerDisconnect = handlePeerDisconnect;
@@ -229,6 +246,7 @@
     // 关闭所有连接
     function netClose(reason) {
         stopHeartbeat();
+        if (Net._disconnectRedirectTimer) { clearTimeout(Net._disconnectRedirectTimer); Net._disconnectRedirectTimer = null; }
         try { Net.conns.forEach(c => c.close()); } catch (e) {}
         try { if (Net.masterConn) Net.masterConn.close(); } catch (e) {}
         try { if (Net.peer) Net.peer.destroy(); } catch (e) {}
