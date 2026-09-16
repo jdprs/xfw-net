@@ -3,19 +3,24 @@
    与现有 .btn / .modal-overlay / .modal-box 风格保持一致
    ================================================================ */
 
-/* ---------- 顶部网络状态栏 ---------- */
+/* ---------- 网络状态栏（v10.6：浮动在聊天框左上方，不占顶部、不遮挡日志） ---------- */
 .net-status-bar {
-    position: sticky;
-    top: 0;
-    z-index: 500;
+    position: fixed;
+    right: 322px;      /* 聊天框(300px + 12px 边距)左侧 */
+    bottom: 12px;
+    z-index: 410;      /* 高于聊天框(400) */
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
+    padding: 6px 12px;
     background: var(--bg-card);
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     font-size: 0.82rem;
     color: var(--text-secondary);
+    max-width: 46vw;
+    flex-wrap: wrap;
 }
 .net-status-dot {
     width: 10px;
@@ -235,4 +240,16 @@
     .chat-body { height: 160px; }
     .mp-code-display { font-size: 1.5rem; letter-spacing: 0.3em; }
     .net-status-room { display: none; }
+    /* v10.6: 小屏下状态栏回顶部，避免固定右下角与全宽聊天框重叠 */
+    .net-status-bar {
+        position: sticky;
+        top: 0;
+        right: auto;
+        bottom: auto;
+        max-width: none;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        border-bottom: 1px solid var(--border-color);
+    }
 }

@@ -17,6 +17,20 @@
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 
+    // v10.7: 让网络状态栏浮动在聊天框左上方（聊天框左侧、顶部之上），不遮挡日志
+    function placeStatusBar() {
+        const bar = document.querySelector('.net-status-bar');
+        if (!bar) return;
+        bar.style.right = '322px';
+        const chat = document.getElementById('chat-panel');
+        if (chat) {
+            bar.style.bottom = (chat.offsetHeight + 20) + 'px';
+        } else {
+            bar.style.bottom = '12px';
+        }
+    }
+    window.placeNetStatusBar = placeStatusBar;
+
     function ensurePanel() {
         if (Chat.panel) return;
         const panel = document.createElement('div');
@@ -39,11 +53,15 @@
         panel.querySelector('#chat-header').onclick = () => {
             panel.classList.toggle('collapsed');
             panel.querySelector('#chat-toggle').textContent = panel.classList.contains('collapsed') ? '▴' : '▾';
+            // v10.7: 折叠/展开后重新定位状态栏
+            placeStatusBar();
         };
         panel.querySelector('#chat-send').onclick = send;
         panel.querySelector('#chat-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') send();
         });
+        // v10.7: 聊天框创建后定位状态栏
+        placeStatusBar();
         // 重放历史
         Chat.history.forEach(m => renderMsg(m));
     }
