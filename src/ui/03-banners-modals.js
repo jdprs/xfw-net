@@ -1,14 +1,17 @@
 //  3. 自定义横幅与模态框（无系统弹窗）
         // ================================================================
 
-        function showBanner(message, type = 'info', duration = null, title = '') {
+        // v10.9: 新增第 5 个参数 iconOverride，用于把自定义符号放到「图标位」（大头针位置），
+        // 而不是塞进黄色标题文字里。传入后横幅自动带 banner-net-icon 类，
+        // 由 CSS 提供脉冲动画 / ::before 扩散光圈 / hover 发光效果。
+        function showBanner(message, type = 'info', duration = null, title = '', iconOverride = '') {
             const container = document.getElementById('banner-container');
             if (!container) return;
             const dur = duration || (BANNER_DURATION * 1000) || 4000;
             const icons = { info: '📌', success: '✅', warning: '⚠️', error: '❌', achievement: '🏅' };
-            const icon = icons[type] || '📌';
+            const icon = iconOverride || icons[type] || '📌';
             const el = document.createElement('div');
-            el.className = `banner-message banner-${type}`;
+            el.className = `banner-message banner-${type}` + (iconOverride ? ' banner-net-icon' : '');
             if (type === 'achievement') {
                 el.style.borderLeftColor = 'var(--accent-gold)';
                 el.style.background = 'linear-gradient(135deg, var(--bg-card), rgba(255,215,0,0.08))';
@@ -138,7 +141,7 @@
             box.innerHTML = `
                     <h3 style="color:var(--accent-gold);margin-bottom:12px;">⚠️ 确认</h3>
                     <p style="color:var(--text-secondary);margin-bottom:16px;">${message}</p>
-                    <div style="display:flex;gap:10px;justify-content:center;">
+                    <div class="btn-row" style="display:flex;gap:10px;justify-content:center;">
                         <button class="btn btn-success" id="confirm-yes">确定</button>
                         <button class="btn btn-warning" id="confirm-no">取消</button>
                     </div>
