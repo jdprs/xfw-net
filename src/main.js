@@ -72,9 +72,13 @@
                     return;
                 }
                 const s = document.createElement('script');
-                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.9';
+                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.10';
                 s.onload = () => { netIndex++; loadNet(); };
-                s.onerror = () => console.error('Net module load failed: ' + netPaths[netIndex]);
+                s.onerror = () => {
+                    console.error('Net module load failed: ' + netPaths[netIndex]);
+                    netIndex++;
+                    loadNet();
+                };
                 document.head.appendChild(s);
             };
             loadNet();
@@ -83,7 +87,10 @@
         const script = document.createElement("script");
         script.src = moduleBasePath + modulePaths[index];
         script.onload = () => loadModule(index + 1);
-        script.onerror = () => console.error(`Module load failed: ${modulePaths[index]}`);
+        script.onerror = () => {
+            console.error(`Module load failed: ${modulePaths[index]}`);
+            loadModule(index + 1);
+        };
         document.head.appendChild(script);
     }
 
