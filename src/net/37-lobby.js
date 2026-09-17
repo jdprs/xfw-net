@@ -1,16 +1,15 @@
 /* ================================================================
  * 37. 大厅与房间系统 (v10.0)
- * 负责：用户名、创建房间、加入房间、广场(extendsclass bin)、等待室、倒计时
+ * 负责：用户名、创建房间、加入房间、等待室、倒计时
  * 在 index.html（大厅）以及联机阶段的房主/玩家页面都可加载，
  * 通过检测 DOM 元素是否存在决定是否初始化大厅 UI。
  *
  * v10.0 修复：所有弹窗按钮统一使用 inline onclick + window 全局函数，
  * 避免动态 innerHTML 后 .onclick 赋值失效导致按钮点不动的问题。
  *
- * v10.2 修复广场：原 kvdb.io 方案已失效（bucket 名非法 + 现要求邮箱验证，
- * 匿名公开写入不可用）。改用 extendsclass.com 的一个公开 JSON bin 作为广场：
- * 整个 bin 固定为 { rooms: { "<6位房间号>": {房间信息, ts} } }，
- * 房主读-改-写自己的条目并每 20s 心跳刷新 ts，玩家按 ts 过滤僵尸房间。
+ * v10.9: 移除「广场」（公开房间列表）功能。kvdb.io 已不可匿名写，
+ * 后续临时接入的 extendsclass 免费 bin 也有限流与稳定性问题，
+ * 现统一改为仅通过 6 位房间号直连，不再保留公开房间列表。
  * ================================================================
  */
 (() => {
@@ -18,9 +17,6 @@
     if (location.search.indexOf('reset=1') >= 0) {
         try { localStorage.removeItem('xfw_username'); } catch(e) {}
     }
-    // 广场后端：extendsclass.com 公开 JSON bin（创建时未设 security key，CORS 全开，匿名可读写）。
-    const PLAZA_BIN_URL = 'https://json.extendsclass.com/bin/b419a9ed3a21';
-    const PLAZA_TTL_MS = 90 * 1000; // 房主每 20s 心跳，超过 90s 未刷新视为房间已死
     const WAIT_MAX_SECONDS = 5 * 60; // 5 分钟等待上限
 
     const Lobby = {
@@ -28,7 +24,6 @@
         lobbyPlayers: [],   // {peerId, name, isHost, online}
         roomConfig: null,
         countdownTimer: null,
-        plazaTimer: null,
         waitSeconds: WAIT_MAX_SECONDS,
         mySeatId: null,     // player 端：自己分配到的 playerId
         joining: false
@@ -65,8 +60,6 @@
         let ov = document.getElementById('mp-overlay');
         if (ov) return ov;
         ov = el('div', 'mp-overlay');
-        // v10.1 修复: 必须设置 id，否则 closeOverlay 用 getElementById 找不到，
-        // 导致「返回单机设置/返回主页」无法关闭遮罩，回不到主页
         ov.id = 'mp-overlay';
         // 与游戏内 password-modal 完全一致：z-index 2001 + backdrop-filter
         ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);overflow-y:auto;padding:16px;';
@@ -80,8 +73,7 @@
     }
     function stopTimers() {
         if (Lobby.countdownTimer) clearInterval(Lobby.countdownTimer);
-        if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-        Lobby.countdownTimer = null; Lobby.plazaTimer = null;
+        Lobby.countdownTimer = null;
     }
     window.lobbyCloseOverlay = closeOverlay;
 
@@ -101,7 +93,7 @@
         return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // ---------- 加载动画浮层（v10.1：网络操作期间给出明确反馈，避免“以为点不动”） ----------
+    // ---------- 加载动画浮层（v10.1：网络操作期间给出明确反馈） ----------
     let _loadingEl = null;
     function showLoading(text) {
         hideLoading();
@@ -201,7 +193,6 @@
                 <label>自建服务器 host:port:path</label>
                 <input type="text" id="mp-custom-host" placeholder="如：example.com:9000:myroom">
             </div>
-            <label class="mp-check-row"><input type="checkbox" id="mp-public" checked> 公开到广场（其他玩家可搜索到）</label>
             <div class="flex-row mt-8">
                 <button class="btn btn-success flex-grow" onclick="window.mpDoCreate()">🚀 创建房间</button>
                 <button class="btn btn-warning" onclick="window.mpShowMainMenu()">返回</button>
@@ -236,14 +227,13 @@
             const maxPlayers = clampInt(parseInt((document.getElementById('mp-maxp') || {}).value) || 2, 2, 6);
             const totalRounds = clampInt(parseInt((document.getElementById('mp-rounds') || {}).value) || 60, 10, 200);
             const signalIdx = parseInt((document.getElementById('mp-signal') || {}).value) || 0;
-            const publicRoom = !!(document.getElementById('mp-public') || {}).checked;
             const signal = parseSignal(signalIdx);
 
             const code = genRoomCode();
             Lobby.roomConfig = {
                 roomName: roomName.trim() || (Lobby.username + '的房间'),
                 hostName: Lobby.username, code, aiCount, extAiCount,
-                maxPlayers, totalRounds, publicRoom, signal, createdAt: Date.now()
+                maxPlayers, totalRounds, signal, createdAt: Date.now()
             };
             Lobby.lobbyPlayers = [{ peerId: 'HOST', name: Lobby.username, isHost: true, online: true }];
 
@@ -262,7 +252,6 @@
                 }
             };
             Lobby.mySeatId = 0;
-            if (publicRoom) await publishRoom();
             startHostCountdown();
             hideLoading();
             renderHostWait();
@@ -272,88 +261,6 @@
             toast('创建房间失败：' + ((e && e.type) ? e.type : (e.message || '网络错误')), 'error', '❌');
         }
     }
-
-    // ---------- 广场：发布 / 拉取（extendsclass 公开 bin） ----------
-    // 整个 bin 结构：{ rooms: { "<房间号>": {name,host,players,max,ai,extAi,code,ts} } }
-    async function plazaRead() {
-        const resp = await fetch(PLAZA_BIN_URL, { cache: 'no-store' });
-        if (!resp.ok) throw new Error('plaza http ' + resp.status);
-        const j = await resp.json();
-        return (j && typeof j === 'object' && j.rooms) ? j : { rooms: {} };
-    }
-    async function plazaWrite(obj) {
-        const resp = await fetch(PLAZA_BIN_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(obj)
-        });
-        if (!resp.ok) throw new Error('plaza put ' + resp.status);
-    }
-
-    // 房主：把自己的房间写进广场，并每 20s 心跳刷新 ts（顺手清理僵尸房间）
-    async function publishRoom() {
-        const cfg = Lobby.roomConfig;
-        if (!cfg || !cfg.publicRoom) return;
-        try {
-            let data;
-            try { data = await plazaRead(); } catch (e) { data = { rooms: {} }; }
-            const now = Date.now();
-            const rooms = data.rooms || {};
-            // 清理心跳过期的僵尸房间
-            for (const c in rooms) {
-                if (!rooms[c].ts || (now - rooms[c].ts) > PLAZA_TTL_MS) delete rooms[c];
-            }
-            rooms[cfg.code] = {
-                name: cfg.roomName, host: cfg.hostName,
-                players: Lobby.lobbyPlayers.length, max: cfg.maxPlayers,
-                ai: cfg.aiCount, extAi: cfg.extAiCount, code: cfg.code, ts: now
-            };
-            data.rooms = rooms;
-            await plazaWrite(data);
-            if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-            Lobby.plazaTimer = setInterval(publishRoom, 20000);
-        } catch (e) {
-            console.warn('publishRoom error:', e);
-            toast('广场发布失败，将仅用房间号加入', 'warning', '⚠️');
-        }
-    }
-
-    // 房主关闭/超时结束时：从广场移除自己的房间
-    async function removeMyRoomFromPlaza() {
-        try {
-            const cfg = Lobby.roomConfig;
-            if (!cfg || !cfg.code) return;
-            const data = await plazaRead();
-            if (data.rooms && data.rooms[cfg.code]) {
-                delete data.rooms[cfg.code];
-                await plazaWrite(data);
-            }
-        } catch (e) { /* 忽略：下次心跳/过期清理也会兜底 */ }
-    }
-
-    // 玩家：拉取广场，只返回仍在心跳（ts 新鲜）的房间
-    async function fetchPlaza() {
-        const ctrl = new AbortController();
-        const timer = setTimeout(function() { ctrl.abort(); }, 6000);
-        try {
-            const resp = await fetch(PLAZA_BIN_URL, { signal: ctrl.signal, cache: 'no-store' });
-            clearTimeout(timer);
-            if (!resp.ok) throw new Error('plaza http ' + resp.status);
-            const data = await resp.json();
-            const now = Date.now();
-            const rooms = [];
-            const obj = (data && data.rooms) || {};
-            for (const k of Object.keys(obj)) {
-                const r = obj[k];
-                if (r && r.code && r.ts && (now - r.ts) < PLAZA_TTL_MS) rooms.push(r);
-            }
-            return rooms;
-        } catch (e) {
-            clearTimeout(timer);
-            return null; // 真正的网络错误才返回 null
-        }
-    }
-    window.lobbyFetchPlaza = fetchPlaza;
 
     // ---------- 房主等待室 ----------
     function startHostCountdown() {
@@ -365,8 +272,6 @@
             if (el) el.textContent = formatCountdown(Lobby.waitSeconds);
             if (Lobby.waitSeconds <= 0) {
                 netBroadcastRaw({ type: 'room_closed', reason: '等待超时，房间已关闭' });
-                if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-                removeMyRoomFromPlaza();
                 toast('等待超时，房间已关闭', 'warning', '⏰');
                 setTimeout(function() { netClose(); closeOverlay(); }, 1500);
             }
@@ -420,8 +325,6 @@
         try {
             netBroadcastRaw({ type: 'close_room' });
         } catch (e) {}
-        if (Lobby.plazaTimer) clearInterval(Lobby.plazaTimer);
-        removeMyRoomFromPlaza();
         try { netClose(); } catch (e) {}
         closeOverlay();
         toast('房间已关闭', 'info', '🚪');
@@ -454,7 +357,6 @@
             netBroadcastRaw({ type: 'player_joined', peerId: peerId, playerName: msg.playerName, seat: seatId });
             renderHostWait();
             toast(msg.playerName + ' 加入了房间', 'success', '👋');
-            if (Lobby.roomConfig.publicRoom) publishRoom();
         } else if (msg.type === 'chat_message') {
             netBroadcastRaw({ type: 'chat_message', fromPeerId: peerId, playerName: msg.playerName, text: msg.text, timestamp: msg.timestamp });
         }
@@ -470,46 +372,9 @@
                     <button class="btn btn-primary" onclick="window.mpJoinGo()">加入</button>
                 </div>
             </div>
-            <div class="section-title" style="margin:10px 0 6px;color:var(--text-secondary);font-size:0.85rem;">🌐 广场公开房间</div>
-            <div id="mp-plaza" class="plaza-list"><div class="plaza-empty">加载中…</div></div>
             <div class="flex-row mt-8">
                 <button class="btn btn-warning flex-grow" onclick="window.mpShowMainMenu()">返回</button>
-                <button class="btn btn-outline flex-grow" onclick="window.mpRefreshPlaza()">🔄 刷新广场</button>
             </div>`);
-        loadPlaza();
-    }
-
-    async function loadPlaza() {
-        const container = document.getElementById('mp-plaza');
-        if (!container) return;
-        const rooms = await fetchPlaza();
-        if (rooms === null) {
-            container.innerHTML = '<div class="plaza-empty">⚠️ 广场暂时不可用，请使用房间号直接加入</div>';
-            return;
-        }
-        if (!rooms.length) {
-            container.innerHTML = '<div class="plaza-empty">暂无公开房间，创建一个吧！</div>';
-            return;
-        }
-        container.innerHTML = '';
-        rooms.sort(function(a, b) { return (b.players - b.max) - (a.players - a.max); });
-        rooms.forEach(function(r) {
-            const item = el('div', 'plaza-room');
-            item.setAttribute('onclick', `window.mpJoinByCode('${esc(r.code)}')`);
-            item.innerHTML = `
-                <div class="pr-name">${esc(r.name)}<div class="pr-meta">房主：${esc(r.host)} · AI×${r.ai || 0}${r.extAi ? ' 外接×' + r.extAi : ''}</div></div>
-                <div style="text-align:right;">
-                    <div class="pr-meta">${r.players}/${r.max} 人</div>
-                    <div class="pr-code">${esc(r.code)}</div>
-                </div>`;
-            container.appendChild(item);
-        });
-    }
-
-    function mpRefreshPlaza() {
-        const container = document.getElementById('mp-plaza');
-        if (container) container.innerHTML = '<div class="plaza-empty">加载中…</div>';
-        loadPlaza();
     }
 
     function mpJoinGo() {
@@ -652,7 +517,6 @@
     window.mpHostCloseRoom = mpHostCloseRoom;
     window.mpJoinGo = mpJoinGo;
     window.mpJoinByCode = mpJoinByCode;
-    window.mpRefreshPlaza = mpRefreshPlaza;
     window.mpGuestExit = mpGuestExit;
 
     if (document.readyState === 'loading') {
