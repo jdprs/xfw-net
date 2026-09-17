@@ -10,7 +10,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="assets/css/style.css?v=10.8" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.9" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -140,7 +140,7 @@
                     <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">🐴 黑马股：每轮随机一只股票成为黑马，涨跌幅乘以倍率</div>
                     <div class="admin-row"><label>黑马股倍率 <input type="number" id="admin-darkhorse-multiplier" value="2.0" step="0.1" min="1.2" max="4.0" /></label></div>
                     <div class="admin-row"><label>黑马股出现概率 <input type="number" id="admin-darkhorse-prob" value="0.35" step="0.05" min="0.05" max="1.0" /></label></div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">概率为每轮黑马股出现的几率，倍率影响涨跌幅度</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">概率为每轮黑马股出现的几率，倍率影响涨跌幅</div>
                 </div>
 
                 <!-- v9.1: 破产设置面板 -->
@@ -305,7 +305,7 @@
         <div class="results-content">
             <h2>🎉 游戏结束</h2>
             <div id="winner-message"></div>
-            <div class="ranking-list" id="ranking-list"></div>
+            <div id="ranking-list"></div>
             <button class="btn btn-gold" id="restart-btn" style="margin-top:14px;width:100%;">🔄 重新开始</button>
         </div>
     </div>
@@ -446,7 +446,7 @@
                 <p>v10.0 新增基于 <span class="highlight">P2P 点对点</span> 的联机对战功能，无需服务器，浏览器直连。</p>
                 <ul>
                     <li><span class="info">创建房间</span>：点击「联机开始」→ 输入昵称 → 创建房间，系统生成 6 位房间号。</li>
-                    <li><span class="info">加入房间</span>：朋友输入 6 位房间号加入，或在「广场」浏览公开房间直接加入。</li>
+                    <li><span class="info">加入房间</span>：朋友输入 6 位房间号加入。</li>
                     <li><span class="info">等待室</span>：房主可设置房间人数、内置/外接 AI 数、总轮数；等待 5 分钟内随时「开始游戏」。</li>
                     <li><span class="info">聊天</span>：游戏右下角聊天面板可与其他玩家交流，房主可禁言刷屏者。</li>
                     <li><span class="danger">房主权限</span>：房主作为权威端维护状态，可「跳过回合」「强制收盘」「禁言」「结束游戏」。</li>
@@ -537,9 +537,9 @@
          与每只股票的涨跌走势图
       9. 所有 UI 自定义，无系统弹窗，适配移动端
     ================================================================ -->
-    <script src="src/main.js?v=10.8"></script>
+    <script src="src/main.js?v=10.9"></script>
     <!-- v10.0: 联机脚本放在 body 末尾，确保 DOM 就绪后执行；main.js 会检测 window.Net 避免重复加载 -->
-    <script src="src/net/36-p2p.js?v=10.8"></script>
-    <script src="src/net/37-lobby.js?v=10.8"></script>
+    <script src="src/net/36-p2p.js?v=10.9"></script>
+    <script src="src/net/37-lobby.js?v=10.9"></script>
 </body>
 </html>
