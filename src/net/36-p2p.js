@@ -140,7 +140,8 @@
                 }
                 setStatus('网络错误', 'disconnected');
                 const msg = (err && err.type) ? ('信令错误：' + err.type) : '网络连接失败';
-                if (typeof showBanner === 'function') showBanner(msg, 'error', null, '📡 联机错误');
+                // v10.9: 📡 放到图标位（第 5 参），黄色标题为纯文字
+                if (typeof showBanner === 'function') showBanner(msg, 'error', null, '联机错误', '📡');
                 reject(err);
             });
         });
@@ -236,11 +237,12 @@
             // 去重：同一个 peerId 的 close+error 只会处理一次，避免重复触发 renderHostWait 导致页面卡死
             if (!Net.conns.has(peerId)) return;
             Net.conns.delete(peerId);
-            if (typeof showBanner === 'function') showBanner('有玩家断开了连接', 'warning', null, '📡 断线');
+            // v10.9: 📡 移到图标位，黄色标题为纯文字
+            if (typeof showBanner === 'function') showBanner('有玩家断开了连接', 'warning', null, '断线', '📡');
             if (Net.onPeerClose) Net.onPeerClose(peerId);
         } else {
             setStatus('与房主断开', 'disconnected');
-            if (typeof showBanner === 'function') showBanner('与房主断开连接，返回大厅', 'error', 5000, '📡 断线');
+            if (typeof showBanner === 'function') showBanner('与房主断开连接，返回大厅', 'error', 5000, '断线', '📡');
             if (Net._disconnectRedirectTimer) clearTimeout(Net._disconnectRedirectTimer);
             Net._disconnectRedirectTimer = setTimeout(() => { window.location.href = 'index.html'; }, 2500);
         }
