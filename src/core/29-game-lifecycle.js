@@ -75,8 +75,8 @@
                     LOOT_RATIO = parseInt(document.getElementById('admin-loot-ratio').value) || 15;
                     ADMIN_CONFIG.volatilityScale = parseFloat(document.getElementById('admin-volatility-scale').value) ||
                         1.0;
-                    ADMIN_CONFIG.lotteryWinScale = parseFloat(document.getElementById('admin-lottery-win-scale')
-                        .value) || 1.0;
+                    ADMIN_CONFIG.lotteryWinScale = parseFloat(document.getElementById('admin-lottery-win-scale').value)
+                        || 1.0;
                     ADMIN_CONFIG.algoMode = document.getElementById('admin-algo-mode').value || '标准';
 
                     ADMIN_CONFIG.aMaxUp = stocks.A.maxUp;
@@ -271,7 +271,7 @@
                     else playerTypes.push(`${p.name} (真人)`);
                 });
                 addLog(`🚀 新游戏开始！${players.length}位玩家：${playerTypes.join('、')}`, 'highlight');
-                showBanner(`🎂 v9.3 新游戏开始！`, 'success', null, '🚀 游戏启动');
+                showBanner(`🎂 v10.0 新游戏开始！`, 'success', null, '🚀 游戏启动');
                 updateCloseMarketButton();
                 updateEndGameButton();
                 setAllControlsEnabled(false);
@@ -318,7 +318,7 @@
                 let achieveCount = p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0;
                 let badge = achieveCount > 0 ? `<span class="achieve-badge">🏅${achieveCount}</span>` : '';
                 div.innerHTML =
-                    `<div><span class="rank-number">💀</span><strong>${p.name}${tag}</strong> 破产 ${badge}</div><div>¥0</div>`;
+                    `<div><span class="rank-number">💀</span><strong>${p.name}</strong> 破产 ${badge}</div><div>¥0</div>`;
                 list.appendChild(div);
             });
             document.getElementById('results-modal').style.display = 'flex';
