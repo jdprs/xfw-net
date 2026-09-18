@@ -3,6 +3,34 @@
  * Loads numbered sections in their original order.
  */
 (() => {
+    // ===== 全局版本号（以后改版本号只需要改这里） =====
+    const GAME_VERSION = '10.0.11';
+    window.GAME_VERSION = GAME_VERSION;
+
+    // 自动同步页面上的版本号显示
+    function syncVersion() {
+        const v = GAME_VERSION;
+        // 更新 title
+        if (document.title) {
+            document.title = document.title.replace(/v[\d.]+/g, 'v' + v);
+        }
+        // 更新主标题
+        const mainTitle = document.getElementById('main-title');
+        if (mainTitle) {
+            mainTitle.innerHTML = mainTitle.innerHTML.replace(/v[\d.]+/g, 'v' + v);
+        }
+        // 更新 .version 元素
+        document.querySelectorAll('.version').forEach(el => {
+            el.textContent = el.textContent.replace(/v[\d.]+/g, 'v' + v);
+        });
+    }
+    // DOM 就绪后立即同步
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncVersion);
+    } else {
+        syncVersion();
+    }
+
     const moduleBasePath = 'src/';
     const modulePaths = [
         'core/01-state.js',
@@ -45,11 +73,6 @@
     function loadModule(index) {
         if (index >= modulePaths.length) {
             // v10.0: 联机模块加载
-            //   - 大厅页(index, 无GAME_MODE): 加载 36-p2p + 37-lobby
-            //   - 联机游戏页(master/player): 加载全部 36-39
-            //   - 单机页(local): 不加载联机模块
-            // v10.0 修复: 如果 window.Net 已存在（说明 36-p2p.js 已通过 body 末尾的
-            //   直接 script 标签加载），跳过动态加载，避免重复执行和状态冲突
             if (window.Net) {
                 if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
                 return;
@@ -72,7 +95,7 @@
                     return;
                 }
                 const s = document.createElement('script');
-                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.11';
+                s.src = moduleBasePath + netPaths[netIndex] + '?v=' + GAME_VERSION;
                 s.onload = () => { netIndex++; loadNet(); };
                 s.onerror = () => {
                     console.error('Net module load failed: ' + netPaths[netIndex]);
