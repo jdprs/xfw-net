@@ -31,7 +31,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="assets/css/style.css?v=10.11" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.0.11" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -118,7 +118,6 @@
                     <button data-tab="tab-lottery">🎫 彩票</button>
                     <button data-tab="tab-achievement">🏅 成就</button>
                     <button data-tab="tab-darkhorse">🐴 黑马股</button>
-                    <!-- v9.1: 新增破产设置选项卡 -->
                     <button data-tab="tab-bankruptcy">💰 破产</button>
                 </div>
 
@@ -164,7 +163,6 @@
                     <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">概率为每轮黑马股出现的几率，倍率影响涨跌幅</div>
                 </div>
 
-                <!-- v9.1: 破产设置面板 -->
                 <div class="admin-tab-content" id="tab-bankruptcy">
                     <div class="admin-bankruptcy-section">
                         <div class="section-label">💰 破产与救助设置</div>
@@ -184,7 +182,6 @@
                 <button class="btn btn-success" id="mp-local-btn" onclick="if(window.lobbyStartLocal)window.lobbyStartLocal();else{localStorage.setItem('xfw_local_config',JSON.stringify({humanPlayers:1,aiPlayers:1,totalRounds:60,admin:null}));location.href='game_local.html';}">🎮 单机开始</button>
                 <button class="btn btn-primary" id="mp-online-btn" onclick="if(window.lobbyStartOnline)window.lobbyStartOnline();">🌐 联机开始</button>
                 <button class="btn btn-primary btn-sm" id="help-btn-setup">❓ 帮助</button>
-                <!-- 隐藏的兼容按钮（事件绑定需要），单机/联机均跳转独立页面 -->
                 <button class="btn btn-success" id="start-game-btn" style="display:none;">🚀 开始新游戏</button>
             </div>
         </div>
@@ -228,14 +225,12 @@
 
             <div class="players-container" id="players-container"></div>
 
-            <!-- v9.1: 在按钮组中添加「直接结束游戏」 -->
             <div class="game-controls" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:16px;">
                 <button class="btn btn-success" id="close-market-btn" disabled>📊 收盘</button>
                 <button class="btn btn-danger" id="end-game-btn" disabled>⏹ 直接结束游戏</button>
                 <button class="btn btn-warning" id="save-game-btn">💾 保存</button>
                 <button class="btn btn-gold" id="export-code-btn">📋 导出存档码</button>
                 <button class="btn btn-gold" id="import-code-btn">📥 导入存档码</button>
-                <!-- v9.2: 历史记录 -->
                 <button class="btn btn-primary btn-sm" id="history-btn">📜 历史记录</button>
                 <button class="btn btn-outline" id="new-game-btn">🔄 新游戏</button>
                 <button class="btn btn-primary btn-sm" id="help-btn">❓ 帮助</button>
@@ -251,13 +246,11 @@
                     <canvas id="stocks-chart"></canvas>
                 </div>
             </div>
-            <!-- v9.2: 展开图表按钮（查看每个玩家/每只股票的涨跌图） -->
             <div class="expand-charts-row">
                 <button class="btn btn-gold btn-sm" id="expand-charts-btn">📊 展开图表 · 查看每个玩家/股票的涨跌图</button>
             </div>
         </div>
 
-        <!-- ===== 日志面板 ===== -->
         <div class="game-history hidden" id="game-history">
             <div class="section-header">
                 <div class="section-title">📜 游戏日志</div>
@@ -269,10 +262,8 @@
             <div class="history-log" id="history-log"><div class="log-entry">🎮 游戏准备就绪</div></div>
         </div>
 
-        <!-- ===== 展开日志按钮 ===== -->
         <button id="show-log-btn" style="display: none;">📜 展开日志</button>
 
-        <!-- ===== 外接AI指令面板 ===== -->
         <div class="modal-overlay" id="eai-overlay">
             <div class="eai-modal-box">
                 <div class="panel-header">
@@ -298,14 +289,13 @@
                     </div>
                     <div class="eai-actions">
                         <button class="btn btn-success btn-sm" id="eai-execute-response">⚡ 执行决策</button>
-                        <button class="btn btn-warning" id="eai-clear-response">清空</button>
+                        <button class="btn btn-warning btn-sm" id="eai-clear-response">清空</button>
                         <button class="btn btn-primary btn-sm" id="eai-panel-close-btn">关闭面板</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ===== 成就馆 ===== -->
         <div class="achievement-modal" id="achievement-modal">
             <div class="achievement-content">
                 <h2>🏅 成就馆</h2>
@@ -317,11 +307,9 @@
 
         <div class="version">基氮实验室 版权所有 · v10.0</div>
         <div class="version">版本号 v10.0</div>
-        <!-- v10.0 大厅初始化标记 -->
         <div id="mp-lobby-root" style="display:none;"></div>
     </div>
 
-    <!-- ===== 结果模态框 ===== -->
     <div class="results-modal" id="results-modal">
         <div class="results-content">
             <h2>🎉 游戏结束</h2>
@@ -331,7 +319,6 @@
         </div>
     </div>
 
-    <!-- ===== 事件模态框 ===== -->
     <div class="event-modal" id="event-modal">
         <div class="event-content" id="event-content">
             <div class="event-icon" id="event-icon">📢</div>
@@ -341,7 +328,6 @@
         </div>
     </div>
 
-    <!-- ===== 通用信息模态框 ===== -->
     <div class="modal-overlay" id="info-modal">
         <div class="modal-box">
             <h3 id="info-modal-title">📢 信息</h3>
@@ -352,9 +338,6 @@
         </div>
     </div>
 
-    <!-- ================================================================
-    帮助模态框 — v9.1 增强版（隐藏高级设置相关内容）
-    ================================================================ -->
     <div class="help-modal" id="help-modal">
         <div class="help-content" id="help-content-body">
             <h2>📖 游戏规则详解</h2>
@@ -488,7 +471,6 @@
                 </ul>
             </div>
 
-            <!-- v9.1: 帮助复制按钮 -->
             <div class="help-copy-row">
                 <button class="btn btn-gold" id="help-copy-btn">📋 复制帮助内容</button>
                 <button class="btn btn-primary" id="help-close-btn">关闭帮助</button>
@@ -496,7 +478,6 @@
         </div>
     </div>
 
-    <!-- ===== 存档码模态框 ===== -->
     <div class="code-modal" id="code-modal">
         <div class="code-modal-content">
             <h3 id="code-modal-title">📋 存档码</h3>
@@ -509,7 +490,6 @@
         </div>
     </div>
 
-    <!-- ===== 历史记录模态框 (v9.2) ===== -->
     <div class="history-modal" id="history-modal">
         <div class="history-content">
             <div class="section-header">
@@ -521,7 +501,6 @@
         </div>
     </div>
 
-    <!-- ===== 展开图表总览 (v9.2) ===== -->
     <div class="expand-overlay" id="expand-overlay">
         <div class="expand-content">
             <div class="section-header">
@@ -536,31 +515,8 @@
         </div>
     </div>
 
-    <!-- ================================================================
-    JavaScript  —  v9.3 增强版
-    核心改动：
-      1. 【v9.1】版本号更新为 v9.1，移除"一周年特别版"
-      2. 【v9.1】破产检测移至收盘时统一处理
-      3. 【v9.1】新增破产资助金机制（高级设置可调）
-      4. 【v9.1】移除"破产者"成就奖励
-      5. 【v9.1】新增"直接结束游戏"按钮
-      6. 【v9.1】帮助内容隐藏高级设置相关
-      7. 【v9.1】保留 :before 和 :hover 效果
-      8. 代码添加详细注释，方便后续 AI 维护
-      9. 所有 UI 自定义，无系统弹窗，适配移动端
-    ================================================================
-    v9.2 新增：
-      1. 修复：取消决策时回滚本轮预测（退还押金、清除记录），
-         并新增「撤销预测」按钮，解决取消后无法再次预测/决策的问题
-      2. 新增历史记录面板：每轮收盘时记录快照（股价/资产/事件），
-         可通过「历史记录」按钮查看
-      3. 新增「展开图表」：在图表下方按钮进入，查看每个玩家
-         与每只股票的涨跌走势图
-      9. 所有 UI 自定义，无系统弹窗，适配移动端
-    ================================================================ -->
-    <script src="src/main.js?v=10.11"></script>
-    <!-- v10.0: 联机脚本放在 body 末尾，确保 DOM 就绪后执行；main.js 会检测 window.Net 避免重复加载 -->
-    <script src="src/net/36-p2p.js?v=10.11"></script>
-    <script src="src/net/37-lobby.js?v=10.11"></script>
+    <script src="src/main.js?v=10.0.11"></script>
+    <script src="src/net/36-p2p.js?v=10.0.11"></script>
+    <script src="src/net/37-lobby.js?v=10.0.11"></script>
 </body>
 </html>
