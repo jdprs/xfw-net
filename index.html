@@ -6,11 +6,32 @@
     <title>小富翁股票投资游戏 v10.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js">
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <!-- PeerJS: 主CDN jsdelivr，失败自动切换 unpkg → cdnjs -->
+    <script>
+        (function(){
+            var peerjsUrls = [
+                'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+                'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js'
+            ];
+            function loadPeerJS(i) {
+                if (i >= peerjsUrls.length) {
+                    console.error('所有PeerJS CDN均加载失败');
+                    return;
+                }
+                var s = document.createElement('script');
+                s.src = peerjsUrls[i];
+                s.onload = function() { console.log('PeerJS loaded from: ' + peerjsUrls[i]); };
+                s.onerror = function() { console.warn('PeerJS CDN failed: ' + peerjsUrls[i] + ', trying next...'); loadPeerJS(i + 1); };
+                document.head.appendChild(s);
+            }
+            loadPeerJS(0);
+        })();
+    </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="assets/css/style.css?v=10.9" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.11" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -277,7 +298,7 @@
                     </div>
                     <div class="eai-actions">
                         <button class="btn btn-success btn-sm" id="eai-execute-response">⚡ 执行决策</button>
-                        <button class="btn btn-warning btn-sm" id="eai-clear-response">清空</button>
+                        <button class="btn btn-warning" id="eai-clear-response">清空</button>
                         <button class="btn btn-primary btn-sm" id="eai-panel-close-btn">关闭面板</button>
                     </div>
                 </div>
@@ -537,9 +558,9 @@
          与每只股票的涨跌走势图
       9. 所有 UI 自定义，无系统弹窗，适配移动端
     ================================================================ -->
-    <script src="src/main.js?v=10.9"></script>
+    <script src="src/main.js?v=10.11"></script>
     <!-- v10.0: 联机脚本放在 body 末尾，确保 DOM 就绪后执行；main.js 会检测 window.Net 避免重复加载 -->
-    <script src="src/net/36-p2p.js?v=10.9"></script>
-    <script src="src/net/37-lobby.js?v=10.9"></script>
+    <script src="src/net/36-p2p.js?v=10.11"></script>
+    <script src="src/net/37-lobby.js?v=10.11"></script>
 </body>
 </html>
