@@ -38,7 +38,7 @@
         'ui/31-event-bindings.js',
         'ui/32-health-warning.js',
         'ui/33-external-ai-panel.js',
-        'modules/34-round-history.js',
+        'ui/34-round-history.js',
         'ui/35-expand-charts.js',
     ];
 
@@ -72,7 +72,7 @@
                     return;
                 }
                 const s = document.createElement('script');
-                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.10';
+                s.src = moduleBasePath + netPaths[netIndex] + '?v=10.11';
                 s.onload = () => { netIndex++; loadNet(); };
                 s.onerror = () => {
                     console.error('Net module load failed: ' + netPaths[netIndex]);
