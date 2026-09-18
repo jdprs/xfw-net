@@ -7,6 +7,8 @@
         function showBanner(message, type = 'info', duration = null, title = '', iconOverride = '') {
             const container = document.getElementById('banner-container');
             if (!container) return;
+            // 置顶：确保横幅显示在所有 overlay / loading 遮罩之上
+            container.style.zIndex = '9999';
             const dur = duration || (BANNER_DURATION * 1000) || 4000;
             const icons = { info: '📌', success: '✅', warning: '⚠️', error: '❌', achievement: '🏅' };
             const icon = iconOverride || icons[type] || '📌';
