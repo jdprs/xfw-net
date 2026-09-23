@@ -13,7 +13,10 @@
         gameStarted: false,
         closing: false,
         chartsInited: false,
-        lastSeq: 0
+        lastSeq: 0,
+        // v10.8: 收盘确认制状态（所有端共用）
+        roundConfirm: null,
+        myConfirmSent: false
     };
     window.Sync = Sync;
 
@@ -187,6 +190,7 @@
         switch (msg.type) {
             case 'join_request': hostOnJoin(peerId, msg); break;
             case 'player_action': hostOnAction(peerId, msg); break;
+            case 'round_confirm': hostOnRoundConfirm(peerId); break;
             case 'chat_message': {
                 if (Net.muted.has(peerId)) {
                     netSendToPeer(peerId, { type: 'muted_notice' });
@@ -227,6 +231,13 @@
         renderReconnectWait();
         if (Sync.gameStarted) {
             netSendToPeer(peerId, { type: 'state_sync', gameState: serializeState() });
+            // v10.8: 若正处于收盘确认阶段，把确认状态补发给重连玩家
+            const c = Sync.roundConfirm;
+            if (c && c.active && seat.playerId !== 0) {
+                if (c.needed.indexOf(seat.playerId) === -1) c.needed.push(seat.playerId);
+                netSendToPeer(peerId, { type: 'round_confirm_state', needed: c.needed.slice(), confirmed: Object.assign({}, c.confirmed), timeoutSec: c.timeoutSec });
+                renderConfirmBanner();
+            }
         }
         netBroadcastRaw({ type: 'player_joined', playerName: msg.playerName });
         maybeAutoStart();
@@ -355,10 +366,7 @@
         closeMarket = async function() {
             if (Sync.closing) return;
             Sync.closing = true;
-            showCloseTimer(30);
-            netBroadcastRaw({ type: 'market_close_timer', duration: 30 });
-            await new Promise(r => setTimeout(r, 30000));
-            hideCloseTimer();
+            // v10.8: 结算立即执行；收盘确认阶段（30 秒倒计时）由 origClose 内部的 hostBeginConfirm 接管
             await origClose();
             Sync.closing = false;
             broadcastState();
@@ -417,17 +425,48 @@
                 showCloseTimer(msg.duration || 30);
                 setTimeout(hideCloseTimer, (msg.duration || 30) * 1000);
                 break;
-            // v10.4: 收盘总结——所有人强制观看 30 秒后自动消失
+            // v10.8: 收盘总结——玩家点「确认」后由房主汇总，全部确认后进入下一轮
             case 'round_summary':
+                Sync.myConfirmSent = false;
                 showInfoModal(msg.title || '📊 收盘总结', msg.summary || '', null);
                 {
                     const ok = document.getElementById('info-modal-ok');
-                    if (ok) ok.style.display = 'none';
-                    setTimeout(function() {
-                        const modal = document.getElementById('info-modal');
-                        if (modal) modal.classList.remove('active');
-                        document.body.classList.remove('modal-open');
-                    }, 30000);
+                    if (ok) {
+                        ok.textContent = '✅ 确认继续';
+                        ok.style.display = '';
+                        ok.disabled = false;
+                        ok.onclick = function() { playerConfirmSelf(); };
+                    }
+                }
+                break;
+            // v10.8: 确认进度同步（房主 → 玩家）
+            case 'round_confirm_state':
+                Sync.roundConfirm = {
+                    active: true,
+                    needed: msg.needed || [],
+                    confirmed: msg.confirmed || {},
+                    timeoutSec: msg.timeoutSec || 30,
+                    remainSec: msg.timeoutSec || 30,
+                    _countdownTimer: null
+                };
+                {
+                    const ok = document.getElementById('info-modal-ok');
+                    if (ok && msg.confirmed && msg.confirmed[Sync.myPlayerId]) {
+                        ok.textContent = '✓ 已确认，等待其他玩家…';
+                        ok.disabled = true;
+                    }
+                }
+                renderConfirmBanner();
+                startConfirmCountdown();
+                break;
+            // v10.8: 全部确认 → 关闭收盘总结，进入下一轮
+            case 'round_all_confirmed':
+                stopConfirmCountdown();
+                hideConfirmWaitBanner();
+                {
+                    const modal = document.getElementById('info-modal');
+                    if (modal) modal.classList.remove('active');
+                    document.body.classList.remove('modal-open');
                 }
                 break;
             // v10.5: 横幅同步（房主 → 玩家）
@@ -440,6 +479,14 @@
                 break;
             // v10.5: 游戏结束（强制结束/最后一轮），同步结果弹窗与横幅
             case 'game_ended':
+                // v10.8: 清理收盘确认残留（横幅 / 收盘总结弹窗）
+                stopConfirmCountdown();
+                hideConfirmWaitBanner();
+                {
+                    const im = document.getElementById('info-modal');
+                    if (im) im.classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                }
                 if (typeof showBanner === 'function') showBanner(msg.forced ? '房主已结束本轮游戏' : '🏁 游戏结束，查看最终排名', msg.forced ? 'warning' : 'info', null, '⏹ 游戏结束');
                 if (msg.winner && typeof document !== 'undefined') {
                     const wm = document.getElementById('winner-message');
@@ -522,6 +569,179 @@
     window.xfwHideCloseTimer = hideCloseTimer;
 
     // ============================================================
+    //  收盘确认制（v10.8，所有端）
+    //  流程：收盘结算后每个真人玩家点「确认」→ 房主收集全部确认 → 进入下一轮
+    //        30 秒未确认自动确认；先确认者看到等待横幅
+    // ============================================================
+
+    function confirmBannerText() {
+        const c = Sync.roundConfirm;
+        if (!c || !c.active) return '';
+        const total = (c.needed || []).length;
+        if (total <= 0) return '';
+        const done = (c.needed || []).filter(id => c.confirmed && c.confirmed[id]).length;
+        const sec = (c.remainSec != null) ? c.remainSec : (c.timeoutSec || 30);
+        if (done >= total) return '';
+        return `⏳ 等待玩家确认… ${done}/${total}（${sec}s 后自动确认）`;
+    }
+    function renderConfirmBanner() {
+        const t = confirmBannerText();
+        if (!t) { hideConfirmWaitBanner(); return; }
+        let el = document.getElementById('confirm-wait-banner');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'confirm-wait-banner';
+            el.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:3000;' +
+                'background:var(--bg-card,#1f2937);border:2px solid #f59e0b;color:#fde68a;' +
+                'padding:10px 22px;border-radius:12px;font-size:0.95rem;box-shadow:0 8px 24px rgba(0,0,0,0.45);' +
+                'white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;';
+            document.body.appendChild(el);
+        }
+        el.textContent = t;
+        el.style.display = 'block';
+    }
+    function hideConfirmWaitBanner() {
+        const el = document.getElementById('confirm-wait-banner');
+        if (el) el.style.display = 'none';
+    }
+    window.xfwHideConfirmWaitBanner = hideConfirmWaitBanner;
+
+    function startConfirmCountdown() {
+        const c = Sync.roundConfirm;
+        if (!c) return;
+        c.remainSec = c.timeoutSec || 30;
+        stopConfirmCountdown();
+        c._countdownTimer = setInterval(function() {
+            if (!c.active) { stopConfirmCountdown(); return; }
+            c.remainSec = Math.max(0, c.remainSec - 1);
+            renderConfirmBanner();
+            if (c.remainSec <= 0) stopConfirmCountdown();
+        }, 1000);
+    }
+    function stopConfirmCountdown() {
+        const c = Sync.roundConfirm;
+        if (c && c._countdownTimer) { clearInterval(c._countdownTimer); c._countdownTimer = null; }
+    }
+
+    // ---- 房主端：权威收集确认 ----
+    function hostBeginConfirm() {
+        if (!Sync.gameStarted || !gameActive) return;
+        if (Sync.roundConfirm && Sync.roundConfirm.active) return;
+        // 需要确认的玩家：所有在线真人玩家（含房主；AI / 外接 AI / 断线玩家不需要确认）
+        const needed = players.filter(function(p) {
+            if (p.isAI || p.isExternal) return false;
+            if (p.id === 0) return true;
+            const seat = Sync.seats[p.id];
+            return seat && seat.connected;
+        }).map(p => p.id);
+        Sync.roundConfirm = {
+            active: true,
+            needed: needed,
+            confirmed: {},
+            timeoutSec: 30,
+            remainSec: 30,
+            _countdownTimer: null,
+            timer: null
+        };
+        // 房主端确认按钮
+        const okBtn = document.getElementById('info-modal-ok');
+        if (okBtn) {
+            okBtn.textContent = '✅ 确认继续';
+            okBtn.style.display = '';
+            okBtn.disabled = false;
+            okBtn.onclick = function() { hostConfirmSelf(); };
+        }
+        renderConfirmBanner();
+        startConfirmCountdown();
+        netBroadcastRaw({ type: 'round_confirm_state', needed: needed.slice(), confirmed: {}, timeoutSec: 30 });
+        Sync.roundConfirm.timer = setTimeout(hostConfirmTimeout, 30000);
+    }
+    window.hostBeginConfirm = hostBeginConfirm;
+
+    function hostConfirmSelf() {
+        const c = Sync.roundConfirm;
+        if (!c || !c.active) return;
+        c.confirmed[0] = true;
+        const okBtn = document.getElementById('info-modal-ok');
+        if (okBtn) { okBtn.textContent = '✓ 已确认，等待其他玩家…'; okBtn.disabled = true; }
+        renderConfirmBanner();
+        netBroadcastRaw({ type: 'round_confirm_state', needed: c.needed.slice(), confirmed: Object.assign({}, c.confirmed), timeoutSec: c.timeoutSec });
+        hostTryAdvance();
+    }
+    window.hostConfirmSelf = hostConfirmSelf;
+
+    function hostOnRoundConfirm(peerId) {
+        const c = Sync.roundConfirm;
+        if (!c || !c.active) return;
+        const seat = Sync.seats.find(s => s.peerId === peerId);
+        if (!seat) return;
+        if (c.needed.indexOf(seat.playerId) === -1) return;
+        c.confirmed[seat.playerId] = true;
+        renderConfirmBanner();
+        netBroadcastRaw({ type: 'round_confirm_state', needed: c.needed.slice(), confirmed: Object.assign({}, c.confirmed), timeoutSec: c.timeoutSec });
+        hostTryAdvance();
+    }
+
+    function hostTryAdvance() {
+        const c = Sync.roundConfirm;
+        if (!c || !c.active) return;
+        const allIn = c.needed.every(id => c.confirmed[id]);
+        if (!allIn) return;
+        finishConfirmRound(false);
+    }
+
+    function hostConfirmTimeout() {
+        const c = Sync.roundConfirm;
+        if (!c || !c.active) return;
+        // 30 秒到：未确认玩家自动确认
+        c.needed.forEach(id => { if (!c.confirmed[id]) c.confirmed[id] = true; });
+        if (typeof showBanner === 'function') showBanner('⏰ 30 秒已到，自动确认进入下一轮', 'info', null, '⏰ 自动确认');
+        finishConfirmRound(true);
+    }
+
+    function finishConfirmRound(auto) {
+        const c = Sync.roundConfirm;
+        if (!c) return;
+        c.active = false;
+        if (c.timer) { clearTimeout(c.timer); c.timer = null; }
+        stopConfirmCountdown();
+        netBroadcastRaw({ type: 'round_all_confirmed', auto: !!auto });
+        hideConfirmWaitBanner();
+        // 关闭本地模态框并推进下一轮
+        const modal = document.getElementById('info-modal');
+        if (modal) modal.classList.remove('active');
+        document.body.classList.remove('modal-open');
+        if (typeof window._onRoundAdvance === 'function') {
+            try { window._onRoundAdvance(); } catch (e) { console.error('advance round', e); }
+        }
+    }
+
+    // ---- 玩家端：点击确认发送给房主 ----
+    function playerConfirmSelf() {
+        if (Sync.myConfirmSent) return;
+        Sync.myConfirmSent = true;
+        const ok = document.getElementById('info-modal-ok');
+        if (ok) { ok.textContent = '✓ 已确认，等待其他玩家…'; ok.disabled = true; }
+        netSendToMaster({ type: 'round_confirm' });
+        const c = Sync.roundConfirm;
+        const total = (c && c.needed && c.needed.length) ? c.needed.length : 1;
+        let el = document.getElementById('confirm-wait-banner');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'confirm-wait-banner';
+            el.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:3000;' +
+                'background:var(--bg-card,#1f2937);border:2px solid #f59e0b;color:#fde68a;' +
+                'padding:10px 22px;border-radius:12px;font-size:0.95rem;box-shadow:0 8px 24px rgba(0,0,0,0.45);' +
+                'white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;';
+            document.body.appendChild(el);
+        }
+        el.textContent = `✅ 你已确认（1/${total}），等待其他玩家…`;
+        el.style.display = 'block';
+    }
+    window.playerConfirmSelf = playerConfirmSelf;
+    window.xfwPlayerConfirmSelf = playerConfirmSelf;
+
+    // ============================================================
     //  房主重连等待界面
     // ============================================================
     function renderReconnectWait() {
@@ -557,6 +777,9 @@
     function startMasterGame() {
         if (Sync.gameStarted) return;
         Sync.gameStarted = true;
+        // v10.8: 新游戏重置收盘确认状态
+        Sync.roundConfirm = null;
+        Sync.myConfirmSent = false;
         const cfg = JSON.parse(localStorage.getItem('xfw_room_config') || '{}');
         const seats = cfg.seats || [];
         setVal('human-players', seats.length);
