@@ -70,8 +70,7 @@
     window.xfwReturnHome = xfwReturnHome;
 
     function goLobbyAfter(msg) {
-        toast(msg || '即将返回大厅', 'warning', '🏠');
-        setTimeout(function() { location.href = 'index.html'; }, 1500);
+        toast(msg || '连接失败，请查看控制台日志', 'warning', '🏠');
     }
     window.xfwGoLobbyAfter = goLobbyAfter;
 
@@ -527,7 +526,6 @@
                 break;
             case 'room_closed': case 'close_room':
                 toast('房间已关闭：' + (msg.reason || ''), 'warning', '🚪');
-                setTimeout(() => { window.location.href = 'index.html'; }, 2500);
                 break;
             case 'chat_message':
                 if (window.Chat) Chat.append(msg, false);
@@ -928,6 +926,15 @@
                         toast('房间已就绪，等待玩家重连…', 'info', '🔌');
                         return;
                     } catch (e) {
+                        console.error('Master room reconnect error:', {
+                            attempt: attempt + 1,
+                            type: e && e.type,
+                            message: e && e.message,
+                            stack: e && e.stack,
+                            error: e,
+                            roomCode: cfg.code,
+                            signal: cfg.signal
+                        });
                         netClose();
                         if (!e || e.type !== 'unavailable-id' || attempt === retryDelays.length - 1) {
                             goLobbyAfter(e && e.type === 'unavailable-id'

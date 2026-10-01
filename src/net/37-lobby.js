@@ -318,7 +318,7 @@
             </div>`);
     }
 
-    function mpHostStartGame() {
+    async function mpHostStartGame() {
         try {
             const cfg = Object.assign({}, Lobby.roomConfig, {
                 seats: Lobby.lobbyPlayers.map(function(p) { return { peerId: p.peerId, name: p.name, isHost: p.isHost }; })
@@ -327,6 +327,7 @@
             netBroadcastRaw({ type: 'start_game' });
             // 进入联机页前显示加载动画，避免“以为点不动”
             showLoading('正在进入游戏…');
+            await netCloseAndWait(3000);
             window.location.href = 'game_connect_master.html';
         } catch (e) {
             console.error('start game error:', e);

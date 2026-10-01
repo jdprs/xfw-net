@@ -133,7 +133,12 @@
                         const now = Date.now();
                         if (now - Net._lastErrorBanner > 5000) {
                             Net._lastErrorBanner = now;
-                            console.warn('Peer error (after open):', err && err.type ? err.type : err);
+                            console.warn('Peer error (after open):', {
+                                type: err && err.type,
+                                message: err && err.message,
+                                stack: err && err.stack,
+                                error: err
+                            });
                         }
                     }
                     return;
@@ -142,6 +147,15 @@
                 setStatus('网络错误', 'disconnected');
                 const msg = (err && err.type) ? ('信令错误：' + err.type) : '网络连接失败';
                 const suppressError = options && Array.isArray(options.suppressErrorTypes) && options.suppressErrorTypes.includes(err && err.type);
+                console.error('Peer hostCreate error:', {
+                    type: err && err.type,
+                    message: err && err.message,
+                    stack: err && err.stack,
+                    error: err,
+                    roomCode: roomCode,
+                    peerId: id,
+                    signal: signal
+                });
                 if (!suppressError && typeof showBanner === 'function') showBanner(msg, 'error', null, '联机错误', '📡');
                 reject(err);
             });
@@ -249,9 +263,9 @@
             if (Net.onPeerClose) Net.onPeerClose(peerId);
         } else {
             setStatus('与房主断开', 'disconnected');
-            if (typeof showBanner === 'function') showBanner('与房主断开连接，返回大厅', 'error', 5000, '断线', '📡');
+            if (typeof showBanner === 'function') showBanner('与房主断开连接，请查看控制台日志', 'error', null, '断线', '📡');
             if (Net._disconnectRedirectTimer) clearTimeout(Net._disconnectRedirectTimer);
-            Net._disconnectRedirectTimer = setTimeout(() => { window.location.href = 'index.html'; }, 2500);
+            Net._disconnectRedirectTimer = null;
         }
     }
     window.netHandlePeerDisconnect = handlePeerDisconnect;
@@ -267,4 +281,26 @@
         Net._peerOpened = false;
     }
     window.netClose = netClose;
+
+    function netCloseAndWait(timeoutMs) {
+        return new Promise((resolve) => {
+            const peer = Net.peer;
+            if (!peer || peer.destroyed) {
+                netClose();
+                resolve();
+                return;
+            }
+            let finished = false;
+            const finish = () => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                resolve();
+            };
+            const timer = setTimeout(finish, timeoutMs || 3000);
+            peer.on('close', finish);
+            netClose();
+        });
+    }
+    window.netCloseAndWait = netCloseAndWait;
 })();
