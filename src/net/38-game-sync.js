@@ -210,8 +210,20 @@
     }
 
     function hostOnJoin(peerId, msg) {
-        let seat = Sync.seats.find(s => !s.isHost && s.name === msg.playerName);
+        // 优先用 playerId 匹配（重连场景），其次用 playerName 匹配
+        let seat = null;
+        if (msg.playerId != null && msg.playerId >= 0) {
+            seat = Sync.seats.find(s => !s.isHost && s.playerId === msg.playerId);
+        }
+        if (!seat) {
+            seat = Sync.seats.find(s => !s.isHost && s.name === msg.playerName);
+        }
         if (seat) {
+            // 清理旧连接（如果有残留）
+            if (seat.peerId && seat.peerId !== peerId && Net.conns.has(seat.peerId)) {
+                try { Net.conns.get(seat.peerId).close(); } catch (e) {}
+                Net.conns.delete(seat.peerId);
+            }
             seat.peerId = peerId;
             seat.connected = true;
         } else {
@@ -923,6 +935,16 @@
                     try {
                         await netHostCreate(cfg.code, cfg.signal, { suppressErrorTypes: ['unavailable-id'] });
                         Net.onMessage = hostHandleMessage;
+                        Net.onPeerClose = function (peerId) {
+                            const seat = Sync.seats.find(s => s.peerId === peerId);
+                            if (seat) {
+                                seat.connected = false;
+                                seat.peerId = null;
+                                renderReconnectWait();
+                                renderHostAdminPanel();
+                                if (window.Chat && typeof Chat.appendSystem === 'function') Chat.appendSystem(seat.name + ' 断开了连接');
+                            }
+                        };
                         toast('房间已就绪，等待玩家重连…', 'info', '🔌');
                         return;
                     } catch (e) {
@@ -968,6 +990,11 @@
                     try {
                         await netPlayerJoin(my.code, signal, my.yourName);
                         Net.onMessage = playerHandleMessage;
+                        Net.onReconnect = function () {
+                            // 重连成功：playerJoin 已自动发送 join_request，房主会回发 state_sync
+                            hidePageLoading();
+                            if (document.getElementById('game-main')) document.getElementById('game-main').style.display = 'block';
+                        };
                         updatePageLoadingText('已连接房主，等待游戏开始…');
                         toast('已连接房主，等待游戏开始…', 'info', '🔌');
                         return;

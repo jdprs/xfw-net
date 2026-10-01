@@ -31,7 +31,11 @@
         _lastPong: 0,
         _peerOpened: false,   // 标记 peer 是否已经 open（open 后忽略非致命 error，避免疯狂弹 banner 卡死）
         _lastErrorBanner: 0,  // error banner 防抖时间戳
-        _disconnectRedirectTimer: null  // 连接建立后断线的"返回大厅"跳转 timer，便于 join 重试时取消
+        _disconnectRedirectTimer: null,  // 连接建立后断线的"返回大厅"跳转 timer，便于 join 重试时取消
+        _lastSignal: null,       // 最后使用的信令服务器配置（用于重连）
+        _reconnectAttempts: 0,   // 重连尝试次数
+        _reconnectTimer: null,   // 重连定时器
+        _maxReconnectAttempts: 5 // 最大重连次数
     };
     window.Net = Net;
     window.SIGNAL_SERVERS = SIGNAL_SERVERS;
@@ -169,6 +173,7 @@
             Net.role = 'player';
             Net.roomCode = roomCode;
             Net.myPlayerName = playerName;
+            Net._lastSignal = signal;
             Net._peerOpened = false;
             Net.masterPeerId = roomPeerId(roomCode);
             const opts = signal && signal.custom ? {} : { host: signal.host, port: signal.port, secure: signal.secure, key: 'peerjs' };
@@ -204,7 +209,12 @@
                     clearTimeout(timer);
                     setStatus('已连接房主', 'connected');
                     startHeartbeat();
-                    sendRaw(conn, { type: 'join_request', playerName: playerName });
+                    let savedPlayerId = null;
+                    try {
+                        const myseat = JSON.parse(localStorage.getItem('xfw_myseat') || '{}');
+                        savedPlayerId = myseat.playerId;
+                    } catch (e) {}
+                    sendRaw(conn, { type: 'join_request', playerName: playerName, playerId: savedPlayerId });
                     safeResolve(pid);
                 });
                 conn.on('data', (data) => handleIncoming(Net.masterPeerId, data));
@@ -255,6 +265,38 @@
         if (typeof Net.onMessage === 'function') Net.onMessage(fromPeerId, data);
     }
 
+    // 玩家端自动重连（指数退避）
+    function tryReconnect() {
+        if (Net.role !== 'player') return;
+        if (Net._reconnectAttempts >= Net._maxReconnectAttempts) {
+            setStatus('重连失败，请返回大厅', 'disconnected');
+            if (typeof showBanner === 'function') showBanner('重连失败，请返回大厅重新加入', 'error', null, '重连失败', '📡');
+            return;
+        }
+        Net._reconnectAttempts++;
+        const delay = Math.min(1000 * Math.pow(2, Net._reconnectAttempts - 1), 8000);
+        setStatus(`与房主断开，${delay / 1000}秒后第${Net._reconnectAttempts}次重连…`, 'connecting');
+        Net._reconnectTimer = setTimeout(async () => {
+            try {
+                // 清理旧连接
+                try { if (Net.masterConn) Net.masterConn.close(); } catch (e) {}
+                try { if (Net.peer) Net.peer.destroy(); } catch (e) {}
+                Net.masterConn = null;
+                Net.peer = null;
+                await playerJoin(Net.roomCode, Net._lastSignal, Net.myPlayerName);
+                // 重连成功，重置计数
+                Net._reconnectAttempts = 0;
+                setStatus('已重连房主', 'connected');
+                if (typeof showBanner === 'function') showBanner('已重新连接房主', 'success', null, '重连成功', '🔌');
+                // 通知上层重连成功
+                if (typeof Net.onReconnect === 'function') Net.onReconnect();
+            } catch (e) {
+                console.warn('Reconnect attempt failed:', Net._reconnectAttempts, e);
+                tryReconnect();
+            }
+        }, delay);
+    }
+
     function handlePeerDisconnect(peerId) {
         if (Net.role === 'master') {
             if (!Net.conns.has(peerId)) return;
@@ -263,9 +305,13 @@
             if (Net.onPeerClose) Net.onPeerClose(peerId);
         } else {
             setStatus('与房主断开', 'disconnected');
-            if (typeof showBanner === 'function') showBanner('与房主断开连接，请查看控制台日志', 'error', null, '断线', '📡');
+            if (typeof showBanner === 'function') showBanner('与房主断开连接，正在尝试重连…', 'warning', null, '断线', '📡');
             if (Net._disconnectRedirectTimer) clearTimeout(Net._disconnectRedirectTimer);
             Net._disconnectRedirectTimer = null;
+            // 启动自动重连（仅在游戏页面中，大厅阶段由上层处理）
+            if (Net._lastSignal && Net.roomCode && typeof window !== 'undefined' && window.GAME_MODE === 'player') {
+                tryReconnect();
+            }
         }
     }
     window.netHandlePeerDisconnect = handlePeerDisconnect;
@@ -273,6 +319,8 @@
     // 关闭所有连接（注意：不修改状态栏，由上层决定显示什么）
     function netClose(reason) {
         stopHeartbeat();
+        if (Net._reconnectTimer) { clearTimeout(Net._reconnectTimer); Net._reconnectTimer = null; }
+        Net._reconnectAttempts = 0;
         if (Net._disconnectRedirectTimer) { clearTimeout(Net._disconnectRedirectTimer); Net._disconnectRedirectTimer = null; }
         try { Net.conns.forEach(c => c.close()); } catch (e) {}
         try { if (Net.masterConn) Net.masterConn.close(); } catch (e) {}
