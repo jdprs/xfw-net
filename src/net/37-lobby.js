@@ -229,7 +229,7 @@
             const signalIdx = parseInt((document.getElementById('mp-signal') || {}).value) || 0;
             const signal = parseSignal(signalIdx);
 
-            const code = genRoomCode();
+            let code = genRoomCode();
             Lobby.roomConfig = {
                 roomName: roomName.trim() || (Lobby.username + '的房间'),
                 hostName: Lobby.username, code, aiCount, extAiCount,
@@ -238,7 +238,20 @@
             Lobby.lobbyPlayers = [{ peerId: 'HOST', name: Lobby.username, isHost: true, online: true }];
 
             showLoading('正在创建房间，连接信令服务器…');
-            await netHostCreate(code, signal);
+            const attemptedCodes = new Set([code]);
+            for (let attempt = 0; ; attempt++) {
+                try {
+                    await netHostCreate(code, signal, { suppressErrorTypes: ['unavailable-id'] });
+                    break;
+                } catch (e) {
+                    netClose();
+                    if (!e || e.type !== 'unavailable-id' || attempt >= 4) throw e;
+                    do { code = genRoomCode(); } while (attemptedCodes.has(code));
+                    attemptedCodes.add(code);
+                    Lobby.roomConfig.code = code;
+                    updateLoadingText('房间号冲突，正在更换房间号并重试…');
+                }
+            }
 
             Net.onMessage = handleHostMessage;
             Net.onPeerOpen = function() {};
@@ -257,6 +270,7 @@
             renderHostWait();
         } catch (e) {
             hideLoading();
+            netClose();
             console.error('create room error:', e);
             toast('创建房间失败：' + ((e && e.type) ? e.type : (e.message || '网络错误')), 'error', '❌');
         }

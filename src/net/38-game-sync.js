@@ -916,12 +916,28 @@
                 document.querySelector('.container').appendChild(root);
             }
             renderReconnectWait();
-            netHostCreate(cfg.code, cfg.signal).then(() => {
-                Net.onMessage = hostHandleMessage;
-                toast('房间已就绪，等待玩家重连…', 'info', '🔌');
-            }).catch(() => {
-                goLobbyAfter('房间恢复失败，即将返回大厅');
-            });
+            (async () => {
+                const retryDelays = [0, 500, 1000, 2000, 3000];
+                for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+                    if (retryDelays[attempt]) {
+                        await new Promise(resolveDelay => setTimeout(resolveDelay, retryDelays[attempt]));
+                    }
+                    try {
+                        await netHostCreate(cfg.code, cfg.signal, { suppressErrorTypes: ['unavailable-id'] });
+                        Net.onMessage = hostHandleMessage;
+                        toast('房间已就绪，等待玩家重连…', 'info', '🔌');
+                        return;
+                    } catch (e) {
+                        netClose();
+                        if (!e || e.type !== 'unavailable-id' || attempt === retryDelays.length - 1) {
+                            goLobbyAfter(e && e.type === 'unavailable-id'
+                                ? '房间 ID 仍被占用，返回大厅后请重新创建房间'
+                                : '房间恢复失败，即将返回大厅');
+                            return;
+                        }
+                    }
+                }
+            })();
         } else if (m === 'player') {
             const my = JSON.parse(localStorage.getItem('xfw_myseat') || '{}');
             // v10.1: 无房间信息（浏览器恢复历史标签页/房间已失效）时直接回大厅

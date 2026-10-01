@@ -97,7 +97,7 @@
     window.netSendToPeer = sendToPeer;
 
     // ---------- 房主：创建房间 ----------
-    async function hostCreate(roomCode, signal) {
+    async function hostCreate(roomCode, signal, options) {
         return new Promise((resolve, reject) => {
             Net.role = 'master';
             Net.roomCode = roomCode;
@@ -141,7 +141,8 @@
                 settled = true;
                 setStatus('网络错误', 'disconnected');
                 const msg = (err && err.type) ? ('信令错误：' + err.type) : '网络连接失败';
-                if (typeof showBanner === 'function') showBanner(msg, 'error', null, '联机错误', '📡');
+                const suppressError = options && Array.isArray(options.suppressErrorTypes) && options.suppressErrorTypes.includes(err && err.type);
+                if (!suppressError && typeof showBanner === 'function') showBanner(msg, 'error', null, '联机错误', '📡');
                 reject(err);
             });
         });
