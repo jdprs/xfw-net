@@ -13,19 +13,18 @@
  * ================================================================
  */
 (() => {
-    // 调试用：?reset=1 清除保存的用户名，强制弹出用户名弹窗
     if (location.search.indexOf('reset=1') >= 0) {
         try { localStorage.removeItem('xfw_username'); } catch(e) {}
     }
-    const WAIT_MAX_SECONDS = 5 * 60; // 5 分钟等待上限
+    const WAIT_MAX_SECONDS = 5 * 60;
 
     const Lobby = {
         username: localStorage.getItem('xfw_username') || '',
-        lobbyPlayers: [],   // {peerId, name, isHost, online}
+        lobbyPlayers: [],
         roomConfig: null,
         countdownTimer: null,
         waitSeconds: WAIT_MAX_SECONDS,
-        mySeatId: null,     // player 端：自己分配到的 playerId
+        mySeatId: null,
         joining: false
     };
     window.Lobby = Lobby;
@@ -42,7 +41,6 @@
         } catch (e) { console.warn('toast error:', e); }
     }
 
-    // 仅在大厅页初始化
     function isLobbyPage() {
         const mode = window.GAME_MODE || 'local';
         return !!document.getElementById('mp-lobby-root') && mode !== 'master' && mode !== 'player';
@@ -55,13 +53,11 @@
         return e;
     }
 
-    // ---------- 打开大厅覆盖层 ----------
     function openOverlay() {
         let ov = document.getElementById('mp-overlay');
         if (ov) return ov;
         ov = el('div', 'mp-overlay');
         ov.id = 'mp-overlay';
-        // 与游戏内 password-modal 完全一致：z-index 2001 + backdrop-filter
         ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);overflow-y:auto;padding:16px;';
         document.body.appendChild(ov);
         return ov;
@@ -84,7 +80,6 @@
         b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;';
         b.innerHTML = innerHtml;
         ov.appendChild(b);
-        // 点击遮罩层空白处关闭（点击面板内不关闭）
         ov.onclick = function(e) { if (e.target === ov) closeOverlay(); };
         return b;
     }
@@ -93,7 +88,6 @@
         return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // ---------- 加载动画浮层（v10.1：网络操作期间给出明确反馈） ----------
     let _loadingEl = null;
     function showLoading(text) {
         hideLoading();
@@ -115,7 +109,6 @@
     window.mpHideLoading = hideLoading;
     window.mpUpdateLoadingText = updateLoadingText;
 
-    // ---------- 返回主页（大厅 overlay 内使用） ----------
     function mpGoHome() {
         try { if (typeof netClose === 'function') netClose(); } catch(e) {}
         stopTimers();
@@ -123,7 +116,6 @@
     }
     window.mpGoHome = mpGoHome;
 
-    // ---------- 用户名 ----------
     function askUsername(next) {
         if (Lobby.username) { next && next(); return; }
         Lobby._nextAfterUsername = next;
@@ -153,7 +145,6 @@
         }
     }
 
-    // ---------- 主菜单 ----------
     function showMainMenu() {
         box(`
             <div class="mp-title">🌐 联机大厅</div>
@@ -172,7 +163,6 @@
         askUsername(showMainMenu);
     }
 
-    // ---------- 创建房间表单 ----------
     function showCreateForm() {
         const serverOpts = (window.SIGNAL_SERVERS || []).map(function(s, i) {
             return '<option value="' + i + '">' + esc(s.label) + '</option>';
@@ -276,7 +266,6 @@
         }
     }
 
-    // ---------- 房主等待室 ----------
     function startHostCountdown() {
         Lobby.waitSeconds = WAIT_MAX_SECONDS;
         if (Lobby.countdownTimer) clearInterval(Lobby.countdownTimer);
@@ -324,9 +313,10 @@
                 seats: Lobby.lobbyPlayers.map(function(p) { return { peerId: p.peerId, name: p.name, isHost: p.isHost }; })
             });
             localStorage.setItem('xfw_room_config', JSON.stringify(cfg));
+            localStorage.setItem('xfw_game_starting', '1');
             netBroadcastRaw({ type: 'start_game' });
-            // 进入联机页前显示加载动画，避免“以为点不动”
             showLoading('正在进入游戏…');
+            Net._navigating = true;
             await netCloseAndWait(3000);
             window.location.href = 'game_connect_master.html';
         } catch (e) {
@@ -345,7 +335,6 @@
         toast('房间已关闭', 'info', '🚪');
     }
 
-    // ---------- 房主消息处理（大厅阶段） ----------
     function handleHostMessage(peerId, msg) {
         if (msg.type === 'join_request') {
             if (Lobby.lobbyPlayers.length >= Lobby.roomConfig.maxPlayers) {
@@ -377,7 +366,6 @@
         }
     }
 
-    // ---------- 加入房间 ----------
     function showJoinForm() {
         box(`
             <div class="mp-title">🔍 加入房间</div>
@@ -402,7 +390,6 @@
         if (Lobby.joining) return;
         Lobby.joining = true;
         showLoading('正在连接房间 ' + code + ' …');
-        // 自动遍历所有公共信令服务器（房主可能用了任意一个）
         const servers = (window.SIGNAL_SERVERS || []).filter(function(s) { return !s.custom; });
         let lastErr = null;
         for (let i = 0; i < servers.length; i++) {
@@ -410,7 +397,6 @@
             updateLoadingText('正在通过 ' + signal.label + ' 连接房间 ' + code + ' …（' + (i+1) + '/' + servers.length + '）');
             try {
                 await netPlayerJoin(code, signal, Lobby.username);
-                // 连接成功
                 Net.onMessage = handleGuestMessage;
                 hideLoading();
                 renderGuestWait({ code: code });
@@ -418,7 +404,6 @@
             } catch (e) {
                 lastErr = e;
                 try { netClose(); } catch (_) {}
-                // 继续尝试下一个服务器
             }
         }
         Lobby.joining = false;
@@ -431,7 +416,6 @@
         toast(msg, 'error', '❌');
     }
 
-    // ---------- 玩家等待室 ----------
     function renderGuestWait(meta) {
         box(`
             <div class="mp-title">⏳ 等待房主开始</div>
@@ -464,7 +448,6 @@
         }).join('');
     }
 
-    // ---------- 玩家消息处理（大厅阶段） ----------
     function handleGuestMessage(fromPeerId, msg) {
         if (msg.type === 'join_accepted') {
             Lobby.joining = false;
@@ -491,11 +474,8 @@
         }
     }
 
-    // ---------- 初始化大厅入口 ----------
     function init() {
         if (!isLobbyPage()) return;
-        // 大厅按钮已在 HTML 中用 inline onclick 绑定（window.lobbyStartOnline / window.lobbyStartLocal），
-        // 此处不做任何 addEventListener，避免重复绑定
     }
 
     function saveLocalSetup() {
@@ -519,7 +499,6 @@
     }
     window.lobbySaveLocalSetup = saveLocalSetup;
 
-    // ===== 暴露所有弹窗按钮的全局函数（inline onclick 调用） =====
     window.lobbyStartOnline = function() { askUsername(showMainMenu); };
     window.lobbyStartLocal = function() { saveLocalSetup(); window.location.href = 'game_local.html'; };
     window.mpUsernameOk = mpUsernameOk;
