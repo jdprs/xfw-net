@@ -272,7 +272,8 @@
                 checkAllDone();
 
                 document.getElementById('code-modal').style.display = 'none';
-                document.getElementById('game-setup').style.display = 'none';
+                const setup = document.getElementById('game-setup');
+                if (setup) setup.style.display = 'none';
                 document.getElementById('game-main').style.display = 'block';
                 showLogPanel();
                 updateUI();

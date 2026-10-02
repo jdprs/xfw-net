@@ -4,7 +4,8 @@
         function initGame(loadSave = false) {
             try {
                 if (loadSave && loadGame()) {
-                    document.getElementById('game-setup').style.display = 'none';
+                    const setup = document.getElementById('game-setup');
+                    if (setup) setup.style.display = 'none';
                     document.getElementById('game-main').style.display = 'block';
                     showLogPanel();
                     updateUI();
@@ -252,7 +253,8 @@
 
                 resetDecisionState();
 
-                document.getElementById('game-setup').style.display = 'none';
+                const setup = document.getElementById('game-setup');
+                if (setup) setup.style.display = 'none';
                 document.getElementById('game-main').style.display = 'block';
                 document.getElementById('results-modal').style.display = 'none';
 
@@ -392,7 +394,8 @@
                 document.body.classList.remove('modal-open');
             }
             clearAllBanners();
-            document.getElementById('game-setup').style.display = 'block';
+            const setup = document.getElementById('game-setup');
+            if (setup) setup.style.display = 'block';
             document.getElementById('game-main').style.display = 'none';
             document.getElementById('results-modal').style.display = 'none';
             document.body.classList.remove('modal-open');

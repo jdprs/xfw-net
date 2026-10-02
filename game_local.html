@@ -10,7 +10,7 @@
     <script>window.GAME_MODE='local';</script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js">
     </script>
-    <link rel="stylesheet" href="assets/css/style.css?v=10.9" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.0.17" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script>
       // v10.0 单机页：从 localStorage 读取大厅设置并自动开局
@@ -63,20 +63,8 @@
         <!-- ===== 保存通知 ===== -->
         <div id="save-notification" class="save-notification">✅ 已保存</div>
 
-        <!-- ===== 密码模态框 ===== -->
-        <div class="password-modal" id="password-modal">
-            <div class="password-box">
-                <h3>🔐 输入密码</h3>
-                <input type="password" id="admin-password-input" placeholder="请输入密码" autofocus />
-                <div class="btn-row">
-                    <button class="btn btn-success" id="admin-pw-confirm">确认</button>
-                    <button class="btn btn-warning" id="admin-pw-cancel">取消</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== 设置界面 ===== -->
-        <div class="game-setup" id="game-setup">
+        <!-- ===== 隐藏的运行时配置字段 ===== -->
+        <div id="runtime-config" hidden>
             <h2>🎮 游戏设置</h2>
             <div class="setup-item">
                 <label>真人玩家数量</label>
@@ -551,6 +539,6 @@
          与每只股票的涨跌走势图
       9. 所有 UI 自定义，无系统弹窗，适配移动端
     ================================================================ -->
-    <script src="src/main.js?v=10.0.14"></script>
+    <script src="src/main.js?v=10.0.17"></script>
 </body>
 </html>

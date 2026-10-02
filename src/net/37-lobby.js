@@ -46,6 +46,36 @@
         return !!document.getElementById('mp-lobby-root') && mode !== 'master' && mode !== 'player';
     }
 
+    function homeSelectMode(mode) {
+        const menu = document.getElementById('home-mode-menu');
+        const setup = document.getElementById('game-setup');
+        if (mode === 'online') {
+            askUsername(showMainMenu);
+            return;
+        }
+        if (!menu || !setup) return;
+        menu.style.display = 'none';
+        setup.style.display = 'block';
+        setup.classList.toggle('settings-view', mode === 'settings');
+        const title = document.getElementById('setup-title');
+        if (title) title.textContent = mode === 'settings' ? '⚙️ 高级设置' : '🎮 单机模式';
+        if (mode === 'settings' && typeof window.openAdminSettings === 'function') {
+            window.openAdminSettings();
+        }
+    }
+    window.homeSelectMode = homeSelectMode;
+
+    function homeBackToMenu() {
+        const menu = document.getElementById('home-mode-menu');
+        const setup = document.getElementById('game-setup');
+        if (setup) {
+            setup.style.display = 'none';
+            setup.classList.remove('settings-view');
+        }
+        if (menu) menu.style.display = '';
+    }
+    window.homeBackToMenu = homeBackToMenu;
+
     function el(tag, cls, html) {
         const e = document.createElement(tag);
         if (cls) e.className = cls;
@@ -54,17 +84,18 @@
     }
 
     function openOverlay() {
-        let ov = document.getElementById('mp-overlay');
-        if (ov) return ov;
-        ov = el('div', 'mp-overlay');
-        ov.id = 'mp-overlay';
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);overflow-y:auto;padding:16px;';
-        document.body.appendChild(ov);
-        return ov;
+        const page = document.getElementById('mp-lobby-root');
+        if (!page) return null;
+        page.classList.add('mp-page');
+        page.style.display = 'block';
+        return page;
     }
     function closeOverlay() {
-        const ov = document.getElementById('mp-overlay');
-        if (ov) ov.remove();
+        const page = document.getElementById('mp-lobby-root');
+        if (page) {
+            page.style.display = 'none';
+            page.innerHTML = '';
+        }
         stopTimers();
     }
     function stopTimers() {
@@ -74,14 +105,17 @@
     window.lobbyCloseOverlay = closeOverlay;
 
     function box(innerHtml) {
-        const ov = openOverlay();
-        ov.innerHTML = '';
-        const b = el('div', 'mp-panel');
-        b.style.cssText = 'max-width:460px;width:100%;max-height:90vh;overflow-y:auto;';
-        b.innerHTML = innerHtml;
-        ov.appendChild(b);
-        ov.onclick = function(e) { if (e.target === ov) closeOverlay(); };
-        return b;
+        const page = openOverlay();
+        if (!page) return null;
+        page.innerHTML = `
+            <div class="mp-page-shell">
+                <div class="mp-page-header">
+                    <strong>🌐 联机大厅</strong>
+                    <button class="btn btn-outline btn-sm" onclick="window.lobbyCloseOverlay()">返回首页</button>
+                </div>
+                <main class="mp-page-content">${innerHtml}</main>
+            </div>`;
+        return page.querySelector('.mp-page-content');
     }
 
     function esc(s) {
@@ -147,14 +181,13 @@
 
     function showMainMenu() {
         box(`
-            <div class="mp-title">🌐 联机大厅</div>
+            <div class="mp-title">选择联机操作</div>
             <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">当前昵称：<strong style="color:var(--accent-gold);">${esc(Lobby.username)}</strong> <a href="javascript:void(0)" id="mp-change-username" onclick="window.mpChangeUsername()" style="font-size:0.75rem;color:var(--text-secondary);margin-left:6px;">修改昵称</a></p>
             <div class="flex-row mb-8">
                 <button class="btn btn-success flex-grow" onclick="window.mpShowCreateForm()">➕ 创建房间</button>
                 <button class="btn btn-primary flex-grow" onclick="window.mpShowJoinForm()">🔍 加入房间</button>
             </div>
-            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回单机设置</button>
-            <button class="btn btn-outline" onclick="window.mpGoHome()" style="width:100%;margin-top:6px;">🏠 返回主页</button>`);
+            <button class="btn btn-outline" onclick="window.lobbyCloseOverlay()" style="width:100%;">返回模式选择</button>`);
     }
 
     function mpChangeUsername() {

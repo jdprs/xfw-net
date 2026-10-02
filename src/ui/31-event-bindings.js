@@ -239,54 +239,31 @@
                 document.getElementById('eai-response-text').value = '';
             });
 
-            // ---- 密码相关（仅设置页存在密码模态框，联机页已移除） ----
-            if ($id('password-modal')) {
-                $id('admin-pw-confirm').onclick = async function() {
-                let pw = document.getElementById('admin-password-input').value.trim();
-                let ok = await verifyPassword(pw);
-                if (ok) {
+            // ---- 高级设置 ----
+            if ($id('admin-panel')) {
+                window.enableAdminSettings = function() {
                     adminMode = true;
-                    document.getElementById('admin-panel').style.display = 'block';
-                    document.getElementById('password-modal').style.display = 'none';
-                    document.body.classList.remove('modal-open');
+                    $id('admin-panel').style.display = 'block';
                     renderAdminAchievements();
                     renderAdminStockGrid();
-                    document.getElementById('admin-init-money').value = INIT_PLAYER_MONEY;
-                    document.getElementById('admin-bank-money').value = INIT_BANK_MONEY;
-                    document.getElementById('admin-loot-threshold').value = LOOT_THRESHOLD;
-                    document.getElementById('admin-loot-ratio').value = LOOT_RATIO;
-                    document.getElementById('admin-volatility-scale').value = ADMIN_CONFIG.volatilityScale;
-                    document.getElementById('admin-lottery-win-scale').value = ADMIN_CONFIG.lotteryWinScale;
-                    document.getElementById('admin-algo-mode').value = ADMIN_CONFIG.algoMode || '标准';
-                    document.getElementById('admin-banner-duration').value = BANNER_DURATION;
-                    document.getElementById('admin-ai-think-min').value = AI_THINK_MIN;
-                    document.getElementById('admin-ai-think-max').value = AI_THINK_MAX;
-                    document.getElementById('admin-chart-type').value = CHART_TYPE;
-                    document.getElementById('admin-darkhorse-multiplier').value = DARK_HORSE_MULTIPLIER;
-                    document.getElementById('admin-darkhorse-prob').value = DARK_HORSE_PROB;
-                    document.getElementById('admin-share-price').value = INIT_SHARE_PRICE;
-                    document.getElementById('admin-bankruptcy-threshold').value = BANKRUPTCY_THRESHOLD;
-                    document.getElementById('admin-bankruptcy-fund').value = BANKRUPTCY_FUND;
-                    showBanner('高级设置已激活', 'success', null, '🔓 已解锁');
-                } else {
-                    showBanner('密码错误', 'error', null, '🔐 验证失败');
-                    document.getElementById('admin-password-input').value = '';
-                    document.getElementById('admin-password-input').focus();
-                }
-            };
-            document.getElementById('admin-pw-cancel').onclick = function() {
-                document.getElementById('password-modal').style.display = 'none';
-                document.body.classList.remove('modal-open');
-            };
-            document.getElementById('password-modal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.style.display = 'none';
-                    document.body.classList.remove('modal-open');
-                }
-            });
-            document.getElementById('admin-password-input').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') document.getElementById('admin-pw-confirm').click();
-            });
+                    setValIf('admin-init-money', INIT_PLAYER_MONEY);
+                    setValIf('admin-bank-money', INIT_BANK_MONEY);
+                    setValIf('admin-loot-threshold', LOOT_THRESHOLD);
+                    setValIf('admin-loot-ratio', LOOT_RATIO);
+                    setValIf('admin-volatility-scale', ADMIN_CONFIG.volatilityScale);
+                    setValIf('admin-lottery-win-scale', ADMIN_CONFIG.lotteryWinScale);
+                    setValIf('admin-algo-mode', ADMIN_CONFIG.algoMode || '标准');
+                    setValIf('admin-banner-duration', BANNER_DURATION);
+                    setValIf('admin-ai-think-min', AI_THINK_MIN);
+                    setValIf('admin-ai-think-max', AI_THINK_MAX);
+                    setValIf('admin-chart-type', CHART_TYPE);
+                    setValIf('admin-darkhorse-multiplier', DARK_HORSE_MULTIPLIER);
+                    setValIf('admin-darkhorse-prob', DARK_HORSE_PROB);
+                    setValIf('admin-share-price', INIT_SHARE_PRICE);
+                    setValIf('admin-bankruptcy-threshold', BANKRUPTCY_THRESHOLD);
+                    setValIf('admin-bankruptcy-fund', BANKRUPTCY_FUND);
+                };
+            }
 
             // ---- 管理员Tab切换 ----
             document.querySelectorAll('.admin-tabs button').forEach(btn => {
@@ -387,8 +364,6 @@
                 }
                 showBanner('高级参数已保存，规则已同步更新', 'success', null, '✅ 应用设置');
             });
-            } // end if (password-modal) — 联机页无密码模态框，跳过管理员绑定
-
             // ---- 键盘快捷键 ----
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
@@ -397,11 +372,11 @@
                         closeExternalPanel();
                     }
                     let modals = document.querySelectorAll(
-                        '.modal-overlay.active, .results-modal, .event-modal, .help-modal, .code-modal, .password-modal'
+                        '.modal-overlay.active, .results-modal, .event-modal, .help-modal, .code-modal'
                         );
                     modals.forEach(m => {
                         if (m.style.display !== 'none' && m.style.display !== '') {
-                            if (m.id === 'code-modal' || m.id === 'password-modal') return;
+                            if (m.id === 'code-modal') return;
                             m.classList.remove('active');
                             m.style.display = 'none';
                             document.body.classList.remove('modal-open');
@@ -418,7 +393,7 @@
             document.querySelectorAll('.results-modal, .event-modal, .help-modal, .code-modal').forEach(el => {
                 el.addEventListener('click', function(e) {
                     if (e.target === this) {
-                        if (this.id === 'code-modal' || this.id === 'password-modal') return;
+                        if (this.id === 'code-modal') return;
                         this.style.display = 'none';
                         document.body.classList.remove('modal-open');
                     }
@@ -432,6 +407,7 @@
                 panel.classList.remove('collapsed');
                 logPanelVisible = true;
                 this.style.display = 'none';
+                if (typeof window.placeNetStatusBar === 'function') window.placeNetStatusBar();
             });
 
             // ---- 控制台提示 ----

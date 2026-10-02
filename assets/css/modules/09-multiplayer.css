@@ -57,6 +57,37 @@
 }
 
 /* ---------- 大厅联机面板 ---------- */
+.mp-page {
+    position: fixed;
+    inset: 0;
+    z-index: 2001;
+    overflow-y: auto;
+    background: linear-gradient(145deg, var(--bg-dark) 0%, #0d2137 100%);
+    color: var(--text-primary);
+}
+.mp-page-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+.mp-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: min(1200px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.mp-page-header strong { color: var(--accent-gold); font-size: 1.05rem; }
+.mp-page-content {
+    width: min(760px, calc(100% - 32px));
+    margin: auto;
+    padding: 32px 0 48px;
+}
+.mp-page-content .mp-title { font-size: 1.25rem; }
 .mp-panel {
     background: var(--bg-card);
     border: 1px solid var(--border-color);

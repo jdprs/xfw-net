@@ -308,10 +308,10 @@
 
     function wrapHostHooks() {
         const origBanner = showBanner;
-        showBanner = function(message, type, duration, title) {
-            origBanner(message, type, duration, title);
+        showBanner = function(message, type, duration, title, iconOverride) {
+            origBanner(message, type, duration, title, iconOverride);
             try {
-                netBroadcastRaw({ type: 'banner', text: message || '', btype: type || 'info', title: title || '' });
+                netBroadcastRaw({ type: 'banner', text: message || '', btype: type || 'info', title: title || '', iconOverride: iconOverride || '' });
             } catch (e) {}
         };
         const origEventModal = showEventModal;
@@ -443,7 +443,7 @@
                 }
                 break;
             case 'banner':
-                if (typeof showBanner === 'function') showBanner(msg.text, msg.btype || 'info', null, msg.title || '');
+                if (typeof showBanner === 'function') showBanner(msg.text, msg.btype || 'info', null, msg.title || '', msg.iconOverride || '');
                 break;
             case 'event_modal':
                 if (msg.event && typeof showEventModal === 'function') showEventModal(msg.event);
@@ -788,7 +788,7 @@
             return `<div class="host-admin-row">
                 <span class="har-name">${conn} ${p.name}${p.id === 0 ? ' 👑' : ''}</span>
                 <button class="btn btn-warning btn-sm" data-act="skip" data-pid="${p.id}">⏭ 跳过回合</button>
-                <button class="btn btn-danger btn-sm" data-act="mute" data-pid="${p.id}">🔇 禁言</button>
+                ${seat && !seat.isHost ? `<button class="btn btn-danger btn-sm" data-act="mute" data-pid="${p.id}">🔇 禁言</button>` : ''}
             </div>`;
         }).join('');
         panel.innerHTML = `

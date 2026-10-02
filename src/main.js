@@ -4,7 +4,7 @@
  */
 (() => {
     // ===== 全局版本号（以后改版本号只需要改这里） =====
-    const GAME_VERSION = '10.0.16';
+    const GAME_VERSION = '10.1';
     window.GAME_VERSION = GAME_VERSION;
 
     // 自动同步页面上的版本号显示
@@ -108,7 +108,7 @@
             return;
         }
         const script = document.createElement("script");
-        script.src = moduleBasePath + modulePaths[index];
+        script.src = moduleBasePath + modulePaths[index] + '?v=' + GAME_VERSION;
         script.onload = () => loadModule(index + 1);
         script.onerror = () => {
             console.error(`Module load failed: ${modulePaths[index]}`);

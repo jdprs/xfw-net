@@ -7,6 +7,7 @@
             panel.classList.remove('collapsed');
             logPanelVisible = true;
             document.getElementById('show-log-btn').style.display = 'none';
+            if (typeof window.placeNetStatusBar === 'function') window.placeNetStatusBar();
         }
 
         function hideLogPanel() {
@@ -15,6 +16,7 @@
             panel.classList.remove('collapsed');
             logPanelVisible = true;
             document.getElementById('show-log-btn').style.display = 'none';
+            if (typeof window.placeNetStatusBar === 'function') window.placeNetStatusBar();
         }
 
         function toggleLogPanel() {
@@ -28,6 +30,7 @@
             } else {
                 showBtn.style.display = 'none';
             }
+            if (typeof window.placeNetStatusBar === 'function') window.placeNetStatusBar();
         }
 
         // ================================================================

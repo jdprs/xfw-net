@@ -1,9 +1,7 @@
 //  3. 自定义横幅与模态框（无系统弹窗）
         // ================================================================
 
-        // v10.9: 新增第 5 个参数 iconOverride，用于把自定义符号放到「图标位」（大头针位置），
-        // 而不是塞进黄色标题文字里。传入后横幅自动带 banner-net-icon 类，
-        // 由 CSS 提供脉冲动画 / ::before 扩散光圈 / hover 发光效果。
+        // 联机模式把标题前的符号用作左侧大图标，标题本身只保留文字。
         function showBanner(message, type = 'info', duration = null, title = '', iconOverride = '') {
             const container = document.getElementById('banner-container');
             if (!container) return;
@@ -11,21 +9,46 @@
             container.style.zIndex = '9999';
             const dur = duration || (BANNER_DURATION * 1000) || 4000;
             const icons = { info: '📌', success: '✅', warning: '⚠️', error: '❌', achievement: '🏅' };
-            const icon = iconOverride || icons[type] || '📌';
+            const isOnlineMode = window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
+            const trimmedTitle = String(title || '').trim();
+            const titleIcon = trimmedTitle.split(/\s+/)[0];
+            const titleHasIcon = !!titleIcon && /^[^\p{L}\p{N}]+$/u.test(titleIcon);
+            const onlineIcon = isOnlineMode ? (iconOverride || (titleHasIcon ? titleIcon : '')) : '';
+            const icon = isOnlineMode ? (onlineIcon || icons[type] || '📌') : (iconOverride || icons[type] || '📌');
             const el = document.createElement('div');
-            el.className = `banner-message banner-${type}` + (iconOverride ? ' banner-net-icon' : '');
+            el.className = `banner-message banner-${type}`;
             if (type === 'achievement') {
                 el.style.borderLeftColor = 'var(--accent-gold)';
                 el.style.background = 'linear-gradient(135deg, var(--bg-card), rgba(255,215,0,0.08))';
             }
-            let titleHtml = title ? `<span class="banner-title">${title}</span>` : '';
+            const titleTextBase = isOnlineMode && titleHasIcon
+                ? trimmedTitle.slice(titleIcon.length).trimStart()
+                : title;
+            const titleByIcon = {
+                '🚀': '开局通知', '🎯': '决策提示', '🤖': 'AI 状态', '🌐': '外接 AI',
+                '👋': '玩家动态', '🔌': '连接状态', '📡': '网络状态', '⏰': '倒计时',
+                '🚪': '房间动态', '⚠️': '操作提醒', '❌': '错误通知', '✅': '进度通知',
+                '🏠': '房间状态', '🎮': '玩家入场', '⏳': '操作受限', '🔇': '聊天管理',
+                '⏭': '回合管理', '💀': '玩家状态', '↩️': '撤销操作', '⏹': '对局结束', '📊': '进度更新'
+            };
+            const titleText = isOnlineMode && !titleTextBase
+                ? (titleByIcon[onlineIcon] || { info: '联机通知', success: '操作成功', warning: '操作提醒', error: '操作失败', achievement: '成就解锁' }[type] || '联机通知')
+                : titleTextBase;
+            let bannerMessage = message;
+            if (isOnlineMode && onlineIcon && typeof bannerMessage === 'string') {
+                const messageStart = bannerMessage.trimStart();
+                if (messageStart.startsWith(onlineIcon)) {
+                    bannerMessage = messageStart.slice(onlineIcon.length).trimStart();
+                }
+            }
+            let titleHtml = titleText ? `<span class="banner-title">${titleText}</span>` : '';
             let badgeHtml = '';
             if (type === 'achievement') {
                 badgeHtml = `<div class="banner-achievement-badge">🏅 成就解锁！</div>`;
             }
             el.innerHTML = `
                     <div class="banner-icon">${icon}</div>
-                    <div class="banner-content">${titleHtml}${message}${badgeHtml}</div>
+                    <div class="banner-content">${titleHtml}${bannerMessage}${badgeHtml}</div>
                     <button class="banner-close" aria-label="关闭">✕</button>
                     <div class="banner-progress" style="width:100%;"></div>
                 `;

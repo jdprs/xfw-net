@@ -167,6 +167,9 @@
         #show-log-btn:active {
             transform: scale(0.95);
         }
+        .game-connect #show-log-btn {
+            z-index: 411;
+        }
 
         /* ===== 横幅系统 ===== */
         #banner-container {
@@ -223,28 +226,28 @@
             display: inline-block;
             transition: transform 0.25s ease, filter 0.25s ease;
         }
-        /* v10.9: 联机横幅图标位（大头针位置）——脉冲动画 + ::before 扩散光圈 + hover 发光 */
-        .banner-message.banner-net-icon .banner-icon {
-            animation: net-icon-pulse 2s ease-in-out infinite;
+        /* All banner icons share the same pulse and ripple treatment. */
+        .banner-message .banner-icon {
+            animation: banner-icon-pulse 2s ease-in-out infinite;
         }
-        .banner-message.banner-net-icon .banner-icon::before {
+        .banner-message .banner-icon::before {
             content: '';
             position: absolute;
             inset: -4px;
             border-radius: 50%;
             border: 1.5px solid rgba(79, 195, 247, 0.55);
-            animation: net-icon-ring 2s ease-out infinite;
+            animation: banner-icon-ripple 2s ease-out infinite;
             pointer-events: none;
         }
-        .banner-message.banner-net-icon .banner-icon:hover {
+        .banner-message .banner-icon:hover {
             transform: scale(1.18);
             filter: drop-shadow(0 0 6px rgba(79, 195, 247, 0.8));
         }
-        @keyframes net-icon-pulse {
+        @keyframes banner-icon-pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.1); }
         }
-        @keyframes net-icon-ring {
+        @keyframes banner-icon-ripple {
             0% { opacity: 0.8; transform: scale(0.85); }
             75%, 100% { opacity: 0; transform: scale(1.35); }
         }

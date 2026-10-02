@@ -24,8 +24,13 @@
         if (!bar) return;
         const isMobile = window.matchMedia('(max-width: 640px)').matches;
         const chat = document.getElementById('chat-panel');
+        const logButton = document.getElementById('show-log-btn');
+        const showLogButton = logButton && logButton.style.display !== 'none';
         if (chat) {
-            bar.style.bottom = (chat.offsetHeight + 20) + 'px';
+            if (showLogButton) {
+                logButton.style.bottom = (chat.offsetHeight + 20) + 'px';
+            }
+            bar.style.bottom = (chat.offsetHeight + (showLogButton ? logButton.offsetHeight + 28 : 20)) + 'px';
         } else {
             bar.style.bottom = '12px';
         }
@@ -33,10 +38,18 @@
             // 小屏：状态栏左缘与全宽聊天框左缘精确对齐（聊天框左上角正上方）
             bar.style.left = (chat ? chat.offsetLeft : 8) + 'px';
             bar.style.right = 'auto';
+            if (showLogButton) {
+                logButton.style.left = (chat ? chat.offsetLeft : 8) + 'px';
+                logButton.style.right = 'auto';
+            }
         } else {
             // 大屏：状态栏右缘与聊天框右缘对齐（聊天框正上方）
             bar.style.right = '12px';
             bar.style.left = 'auto';
+            if (showLogButton) {
+                logButton.style.right = '12px';
+                logButton.style.left = 'auto';
+            }
         }
     }
     window.placeNetStatusBar = placeStatusBar;
@@ -140,6 +153,8 @@
     function init() {
         const mode = window.GAME_MODE || 'local';
         if (mode === 'master' || mode === 'player') {
+            document.body.classList.add('game-connect');
+            window.addEventListener('resize', placeStatusBar);
             // v10.1: 不在页面加载时立即创建聊天框，等游戏真正开始后由
             // 38-game-sync 调用 chatActivate() 再创建，
             // 避免浏览器恢复标签页/房间失效时残留聊天框等联机元素。

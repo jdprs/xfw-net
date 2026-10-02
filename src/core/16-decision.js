@@ -206,7 +206,7 @@
                     pendingAITimeout = null;
                 }, 300);
             } else {
-                showBanner(`🎯 ${p.name} 请进行操作，完成后点击"完成"`, 'success', null, '🎯 决策中');
+                showBanner(`${p.name} 请进行操作，完成后点击"完成"`, 'success', null, '🎯 决策中');
                 updatePlayersDisplay();
             }
             updateDecisionUI();

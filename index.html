@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="assets/css/style.css?v=10.0.11" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.0.17" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -60,27 +60,41 @@
             <h1 id="main-title">
                 🏆 小富翁股票投资游戏 v10.0
             </h1>
-            <p class="subtitle">在多种玩法中成为最终赢家！</p>
-            <p class="subtitle" style="font-size:0.8rem;"> 整元交易</p>
-            <p class="subtitle" style="font-size:0.8rem;">总资产低于阈值即破产</p>
+            <p class="subtitle">A股 · B股 · C股 · D股 · 自建股 · 彩票 · 外接AI · 成就 · 决策机制</p>
+            <p class="subtitle" style="font-size:0.8rem;">✨ 整元交易 · 总资产奖励 · 盈亏显示 · 外接AI全信息 ✨</p>
+            <p class="subtitle" style="font-size:0.8rem;">总资产低于阈值即破产 · v9.1 收盘统一破产检测 + 资助金</p>
         </header>
 
         <div id="banner-container"></div>
         <div id="save-notification" class="save-notification">✅ 已保存</div>
 
-        <div class="password-modal" id="password-modal">
-            <div class="password-box">
-                <h3>🔐 输入密码</h3>
-                <input type="password" id="admin-password-input" placeholder="请输入密码" autofocus />
-                <div class="btn-row">
-                    <button class="btn btn-success" id="admin-pw-confirm">确认</button>
-                    <button class="btn btn-warning" id="admin-pw-cancel">取消</button>
-                </div>
+        <section class="home-mode-menu" id="home-mode-menu">
+            <h2>选择模式</h2>
+            <div class="home-mode-options">
+                <button class="home-mode-option" onclick="window.homeSelectMode('single')">
+                    <span class="home-mode-icon">🎮</span>
+                    <span class="home-mode-label">单机模式</span>
+                    <span class="home-mode-description">设置本局玩家与 AI，然后开始游戏</span>
+                </button>
+                <button class="home-mode-option" onclick="window.homeSelectMode('online')">
+                    <span class="home-mode-icon">🌐</span>
+                    <span class="home-mode-label">联机模式</span>
+                    <span class="home-mode-description">创建房间或加入已有房间</span>
+                </button>
+                <button class="home-mode-option" onclick="window.homeSelectMode('settings')">
+                    <span class="home-mode-icon">⚙️</span>
+                    <span class="home-mode-label">设置</span>
+                    <span class="home-mode-description">原高级设置，仅适用于单机，不支持联机设置</span>
+                </button>
             </div>
-        </div>
+        </section>
 
-        <div class="game-setup" id="game-setup">
-            <h2>🎮 游戏设置</h2>
+        <div class="game-setup" id="game-setup" style="display:none;">
+            <h2 id="setup-title">🎮 单机模式</h2>
+            <div class="setup-page-toolbar">
+                <button class="btn btn-outline btn-sm" onclick="window.homeBackToMenu()">← 返回模式选择</button>
+            </div>
+            <div class="settings-mode-note">高级设置仅对单机游戏生效，不支持联机设置。</div>
             <div class="setup-item">
                 <label>真人玩家数量</label>
                 <input type="number" id="human-players" min="1" max="4" value="1" />
@@ -168,13 +182,12 @@
                 </div>
 
                 <button class="btn btn-primary btn-sm" id="apply-admin-btn" style="margin-top:8px;">应用设置</button>
-                <div class="setup-note">高级设置已激活，调整后新游戏生效，规则实时同步</div>
+                <div class="setup-note">高级设置已激活，调整后新游戏生效；联机模式不支持这些设置</div>
             </div>
 
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
+            <div class="setup-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px;">
                 <button class="btn btn-gold" id="load-save-btn" style="display:none;">📂 读取存档</button>
                 <button class="btn btn-success" id="mp-local-btn" onclick="if(window.lobbyStartLocal)window.lobbyStartLocal();else{localStorage.setItem('xfw_local_config',JSON.stringify({humanPlayers:1,aiPlayers:1,totalRounds:60,admin:null}));location.href='game_local.html';}">🎮 单机开始</button>
-                <button class="btn btn-primary" id="mp-online-btn" onclick="if(window.lobbyStartOnline)window.lobbyStartOnline();">🌐 联机开始</button>
                 <button class="btn btn-primary btn-sm" id="help-btn-setup">❓ 帮助</button>
                 <button class="btn btn-success" id="start-game-btn" style="display:none;">🚀 开始新游戏</button>
             </div>
@@ -508,7 +521,7 @@
         </div>
     </div>
 
-    <script src="src/main.js?v=10.0.15"></script>
+    <script src="src/main.js?v=10.0.17"></script>
     <script src="src/net/36-p2p.js?v=10.0.15"></script>
     <script src="src/net/37-lobby.js?v=10.0.15"></script>
 </body>
