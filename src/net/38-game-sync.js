@@ -9,12 +9,11 @@
 (() => {
     const Sync = {
         myPlayerId: -1,
-        seats: [],            // master: [{peerId?, name, isHost, playerId, connected}]
+        seats: [],
         gameStarted: false,
         closing: false,
         chartsInited: false,
         lastSeq: 0,
-        // v10.8: 收盘确认制状态（所有端共用）
         roundConfirm: null,
         myConfirmSent: false
     };
@@ -23,15 +22,11 @@
     function toast(m, t, title) { if (typeof showBanner === 'function') showBanner(m, t || 'info', null, title || ''); }
     function mode() { return window.GAME_MODE || 'local'; }
 
-    // ============================================================
-    //  页面级加载浮层（v10.1：玩家端连接/等待期间给出反馈）
-    // ============================================================
     function showPageLoading(text) {
         hidePageLoading();
         const ov = document.createElement('div');
         ov.id = 'mp-page-loading';
         ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:2600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(3px);';
-        // v10.5: 加载遮罩内提供返回大厅按钮——连接中/失败时状态栏被遮罩挡住，玩家也能随时退出
         ov.innerHTML = '<div class="mp-loader"></div><div class="mp-loading-text" id="mp-page-loading-text">' + (text || '加载中…') + '</div>' +
             '<button class="btn btn-warning" id="mp-loading-home" onclick="window.xfwReturnHome()">🏠 返回大厅</button>';
         document.body.appendChild(ov);
@@ -48,9 +43,6 @@
     window.xfwHidePageLoading = hidePageLoading;
     window.xfwUpdatePageLoadingText = updatePageLoadingText;
 
-    // ============================================================
-    //  返回大厅（v10.1：联机页顶部状态栏按钮 / 结束后返回主页）
-    // ============================================================
     function xfwReturnHome() {
         try { if (typeof netClose === 'function') netClose(); } catch(e) {}
         hidePageLoading();
@@ -74,9 +66,6 @@
     }
     window.xfwGoLobbyAfter = goLobbyAfter;
 
-    // ============================================================
-    //  序列化 / 反序列化
-    // ============================================================
     function makeTotalAssetsMethod() {
         return function() {
             let stockVal = ['A', 'B', 'C', 'D'].reduce((sum, k) => {
@@ -182,9 +171,6 @@
     }
     window.xfwBroadcastState = broadcastState;
 
-    // ============================================================
-    //  房主端：消息处理
-    // ============================================================
     function hostHandleMessage(peerId, msg) {
         switch (msg.type) {
             case 'join_request': hostOnJoin(peerId, msg); break;
@@ -195,7 +181,6 @@
                     netSendToPeer(peerId, { type: 'muted_notice' });
                     return;
                 }
-                // v10.5: 房主端本地显示玩家消息，并转发给其他玩家（排除发送者，避免其重复显示）
                 if (window.Chat && typeof Chat.append === 'function') Chat.append({ playerName: msg.playerName, text: msg.text, timestamp: Date.now() }, false);
                 netBroadcastRaw({ type: 'chat_message', fromPeerId: peerId, playerName: msg.playerName, text: msg.text, timestamp: Date.now() }, peerId);
                 break;
@@ -210,7 +195,6 @@
     }
 
     function hostOnJoin(peerId, msg) {
-        // 优先用 playerId 匹配（重连场景），其次用 playerName 匹配
         let seat = null;
         if (msg.playerId != null && msg.playerId >= 0) {
             seat = Sync.seats.find(s => !s.isHost && s.playerId === msg.playerId);
@@ -219,7 +203,6 @@
             seat = Sync.seats.find(s => !s.isHost && s.name === msg.playerName);
         }
         if (seat) {
-            // 清理旧连接（如果有残留）
             if (seat.peerId && seat.peerId !== peerId && Net.conns.has(seat.peerId)) {
                 try { Net.conns.get(seat.peerId).close(); } catch (e) {}
                 Net.conns.delete(seat.peerId);
@@ -242,7 +225,6 @@
         renderReconnectWait();
         if (Sync.gameStarted) {
             netSendToPeer(peerId, { type: 'state_sync', gameState: serializeState() });
-            // v10.8: 若正处于收盘确认阶段，把确认状态补发给重连玩家
             const c = Sync.roundConfirm;
             if (c && c.active && seat.playerId !== 0) {
                 if (c.needed.indexOf(seat.playerId) === -1) c.needed.push(seat.playerId);
@@ -289,9 +271,6 @@
         renderHostAdminPanel();
     }
 
-    // ============================================================
-    //  房主端：自动推进回合（v10.3：房主先决策 → 房主指定下一位决策者）
-    // ============================================================
     function seatConnectedForPlayer(pid) {
         const seat = Sync.seats[pid];
         if (!seat) return true;
@@ -302,13 +281,11 @@
     function hostAdvanceTurn() {
         if (!Sync.gameStarted || !gameActive) return;
         if (decisionState !== 'idle') return;
-        // 1) 房主先决策（每轮优先）
         const host = players.find(p => p.id === 0);
         if (host && !host.bankrupt && playerDecisionStatus[0] !== 'done') {
             startDecision(0);
             return;
         }
-        // 2) 房主已完成 → 全部（含 AI/外接）由房主指定，不再自动决策
         const hasPending = players.some(p => !p.bankrupt && playerDecisionStatus[p.id] !== 'done');
         if (!hasPending) return;
         decisionState = 'host_select';
@@ -318,7 +295,6 @@
     }
     window.xfwAdvanceTurn = hostAdvanceTurn;
 
-    // v10.4: 房主在 host_select 状态点选下一位决策者（真人/AI/外接均由房主决定）
     function hostPickNext(pid) {
         if (!Sync.gameStarted || !gameActive) return;
         if (decisionState !== 'host_select') return;
@@ -330,9 +306,7 @@
     }
     window.xfwHostPickNext = hostPickNext;
 
-    // 包装核心函数：广播 + 推进
     function wrapHostHooks() {
-        // v10.5: 横幅与事件弹窗同步到玩家端（外接AI面板等房主专属内容不同步）
         const origBanner = showBanner;
         showBanner = function(message, type, duration, title) {
             origBanner(message, type, duration, title);
@@ -347,7 +321,6 @@
             } catch (e) {}
             return origEventModal(evt);
         };
-        // v10.3: 房主启动某玩家回合后立即广播，玩家端才能知道「轮到自己」
         const origStart = startDecision;
         startDecision = function(pid) {
             const before = decisionState;
@@ -360,7 +333,6 @@
             broadcastState();
             hostAdvanceTurn();
         };
-        // v10.3: 取消决策后回到「房主指定」状态并广播
         const origCancel = cancelDecision;
         cancelDecision = function(pid) {
             origCancel(pid);
@@ -377,16 +349,12 @@
         closeMarket = async function() {
             if (Sync.closing) return;
             Sync.closing = true;
-            // v10.8: 结算立即执行；收盘确认阶段（30 秒倒计时）由 origClose 内部的 hostBeginConfirm 接管
             await origClose();
             Sync.closing = false;
             broadcastState();
         };
     }
 
-    // ============================================================
-    //  玩家端：包装操作函数为发送
-    // ============================================================
     function wrapPlayerActions() {
         const acts = {
             investStock: (pid, stock, shares) => ['buy_stock', { stock, shares }],
@@ -414,9 +382,6 @@
         });
     }
 
-    // ============================================================
-    //  玩家端：消息处理
-    // ============================================================
     function playerHandleMessage(fromPeerId, msg) {
         switch (msg.type) {
             case 'join_accepted':
@@ -436,7 +401,6 @@
                 showCloseTimer(msg.duration || 30);
                 setTimeout(hideCloseTimer, (msg.duration || 30) * 1000);
                 break;
-            // v10.8: 收盘总结——玩家点「确认」后由房主汇总，全部确认后进入下一轮
             case 'round_summary':
                 Sync.myConfirmSent = false;
                 showInfoModal(msg.title || '📊 收盘总结', msg.summary || '', null);
@@ -450,7 +414,6 @@
                     }
                 }
                 break;
-            // v10.8: 确认进度同步（房主 → 玩家）
             case 'round_confirm_state':
                 Sync.roundConfirm = {
                     active: true,
@@ -470,7 +433,6 @@
                 renderConfirmBanner();
                 startConfirmCountdown();
                 break;
-            // v10.8: 全部确认 → 关闭收盘总结，进入下一轮
             case 'round_all_confirmed':
                 stopConfirmCountdown();
                 hideConfirmWaitBanner();
@@ -480,17 +442,13 @@
                     document.body.classList.remove('modal-open');
                 }
                 break;
-            // v10.5: 横幅同步（房主 → 玩家）
             case 'banner':
                 if (typeof showBanner === 'function') showBanner(msg.text, msg.btype || 'info', null, msg.title || '');
                 break;
-            // v10.5: 随机事件弹窗同步
             case 'event_modal':
                 if (msg.event && typeof showEventModal === 'function') showEventModal(msg.event);
                 break;
-            // v10.5: 游戏结束（强制结束/最后一轮），同步结果弹窗与横幅
             case 'game_ended':
-                // v10.8: 清理收盘确认残留（横幅 / 收盘总结弹窗）
                 stopConfirmCountdown();
                 hideConfirmWaitBanner();
                 {
@@ -548,9 +506,6 @@
         }
     }
 
-    // ============================================================
-    //  收盘倒计时浮层（所有端）
-    // ============================================================
     function showCloseTimer(seconds) {
         hideCloseTimer();
         const ov = document.createElement('div');
@@ -577,12 +532,6 @@
     }
     window.xfwShowCloseTimer = showCloseTimer;
     window.xfwHideCloseTimer = hideCloseTimer;
-
-    // ============================================================
-    //  收盘确认制（v10.8，所有端）
-    //  流程：收盘结算后每个真人玩家点「确认」→ 房主收集全部确认 → 进入下一轮
-    //        30 秒未确认自动确认；先确认者看到等待横幅
-    // ============================================================
 
     function confirmBannerText() {
         const c = Sync.roundConfirm;
@@ -633,11 +582,9 @@
         if (c && c._countdownTimer) { clearInterval(c._countdownTimer); c._countdownTimer = null; }
     }
 
-    // ---- 房主端：权威收集确认 ----
     function hostBeginConfirm() {
         if (!Sync.gameStarted || !gameActive) return;
         if (Sync.roundConfirm && Sync.roundConfirm.active) return;
-        // 需要确认的玩家：所有在线真人玩家（含房主；AI / 外接 AI / 断线玩家不需要确认）
         const needed = players.filter(function(p) {
             if (p.isAI || p.isExternal) return false;
             if (p.id === 0) return true;
@@ -653,7 +600,6 @@
             _countdownTimer: null,
             timer: null
         };
-        // 房主端确认按钮
         const okBtn = document.getElementById('info-modal-ok');
         if (okBtn) {
             okBtn.textContent = '✅ 确认继续';
@@ -703,7 +649,6 @@
     function hostConfirmTimeout() {
         const c = Sync.roundConfirm;
         if (!c || !c.active) return;
-        // 30 秒到：未确认玩家自动确认
         c.needed.forEach(id => { if (!c.confirmed[id]) c.confirmed[id] = true; });
         if (typeof showBanner === 'function') showBanner('⏰ 30 秒已到，自动确认进入下一轮', 'info', null, '⏰ 自动确认');
         finishConfirmRound(true);
@@ -717,7 +662,6 @@
         stopConfirmCountdown();
         netBroadcastRaw({ type: 'round_all_confirmed', auto: !!auto });
         hideConfirmWaitBanner();
-        // 关闭本地模态框并推进下一轮
         const modal = document.getElementById('info-modal');
         if (modal) modal.classList.remove('active');
         document.body.classList.remove('modal-open');
@@ -726,7 +670,6 @@
         }
     }
 
-    // ---- 玩家端：点击确认发送给房主 ----
     function playerConfirmSelf() {
         if (Sync.myConfirmSent) return;
         Sync.myConfirmSent = true;
@@ -751,9 +694,6 @@
     window.playerConfirmSelf = playerConfirmSelf;
     window.xfwPlayerConfirmSelf = playerConfirmSelf;
 
-    // ============================================================
-    //  房主重连等待界面
-    // ============================================================
     function renderReconnectWait() {
         const root = document.getElementById('net-reconnect-root');
         if (!root) return;
@@ -781,13 +721,9 @@
 
     function maybeAutoStart() { renderReconnectWait(); }
 
-    // ============================================================
-    //  房主端启动
-    // ============================================================
     function startMasterGame() {
         if (Sync.gameStarted) return;
         Sync.gameStarted = true;
-        // v10.8: 新游戏重置收盘确认状态
         Sync.roundConfirm = null;
         Sync.myConfirmSent = false;
         const cfg = JSON.parse(localStorage.getItem('xfw_room_config') || '{}');
@@ -795,7 +731,6 @@
         setVal('human-players', seats.length);
         setVal('ai-players', cfg.aiCount || 0);
         setVal('total-rounds', cfg.totalRounds || 60);
-        // 重建外接AI配置（仅房主端运行）
         externalAIConfigs = [];
         const extN = cfg.extAiCount || 0;
         for (let i = 0; i < extN; i++) {
@@ -804,7 +739,6 @@
                 apiKey: '', model: 'gpt-3.5-turbo', endpoint: 'https://api.openai.com/v1/chat/completions'
             });
         }
-        // 初始化座位映射（boot 已按 cfg.seats 建立，这里补齐 playerId 并保留已连接的 peerId）
         if (!Sync.seats || !Sync.seats.length) {
             Sync.seats = (cfg.seats || []).map((s, i) => ({
                 peerId: s.peerId, name: s.name, isHost: s.isHost,
@@ -833,9 +767,6 @@
 
     function setVal(id, v) { const e = document.getElementById(id); if (e) e.value = v; }
 
-    // ============================================================
-    //  房主管理面板
-    // ============================================================
     function buildHostAdminPanel() {
         let panel = document.getElementById('host-admin-panel');
         if (!panel) {
@@ -897,20 +828,15 @@
         };
         const eg = document.getElementById('host-end-game');
         if (eg) eg.onclick = () => {
-            // v10.5: 强制结束，玩家端同步「房主已结束本轮游戏」横幅与排名弹窗
             if (typeof endGame === 'function') endGame(true);
             netBroadcastRaw({ type: 'state_sync', gameState: serializeState() });
         };
     }
 
-    // ============================================================
-    //  启动入口
-    // ============================================================
     function boot() {
         const m = mode();
         if (m === 'master') {
             const cfg = JSON.parse(localStorage.getItem('xfw_room_config') || '{}');
-            // v10.1: 无房间配置（如浏览器恢复历史标签页）时直接回大厅，不残留开始界面
             if (!cfg.code) {
                 goLobbyAfter('未找到房间配置，即将返回大厅');
                 return;
@@ -927,8 +853,6 @@
             }
             renderReconnectWait();
             (async () => {
-                // v10.0.15: 页面跳转后旧 PeerID 可能仍被信令服务器占用（unavailable-id），
-                // 免费 PeerJS 云服务器释放旧注册通常需要 10~30 秒，加长重试间隔与总时长
                 const retryDelays = [0, 1000, 2000, 3000, 5000, 5000, 5000];
                 for (let attempt = 0; attempt < retryDelays.length; attempt++) {
                     if (retryDelays[attempt]) {
@@ -948,6 +872,11 @@
                             }
                         };
                         toast('房间已就绪，等待玩家重连…', 'info', '🔌');
+                        var autoStart = localStorage.getItem('xfw_game_starting') === '1';
+                        localStorage.removeItem('xfw_game_starting');
+                        if (autoStart) {
+                            startMasterGame();
+                        }
                         return;
                     } catch (e) {
                         console.error('Master room reconnect error:', {
@@ -972,21 +901,15 @@
             })();
         } else if (m === 'player') {
             const my = JSON.parse(localStorage.getItem('xfw_myseat') || '{}');
-            // v10.1: 无房间信息（浏览器恢复历史标签页/房间已失效）时直接回大厅
             if (!my.code) {
                 goLobbyAfter('未找到房间信息，即将返回大厅');
                 return;
             }
             wrapPlayerActions();
-            // v10.6: 记录玩家名供聊天等展示（玩家页无 Lobby.username）
             Sync.myName = my.yourName || '玩家';
             if (document.getElementById('game-setup')) document.getElementById('game-setup').style.display = 'none';
             showPageLoading('正在连接房主…');
-            // v10.7 修复：与大厅加入策略一致，遍历所有公共信令服务器。
-            // 房主重建游戏页时用的是创建房间时选择的信令服务器（cfg.signal），不一定是 [0]；
-            // 之前硬编码 [0] 会导致房主在其它信令服务器时玩家永远 peer-unavailable、连不上。
             const servers = (window.SIGNAL_SERVERS || []).filter(function (s) { return !s.custom; });
-            // v10.0.15: 优先尝试上次成功连接的信令服务器，减少轮询耗时
             if (my.signalHost) {
                 const savedIdx = servers.findIndex(s => s.host === my.signalHost);
                 if (savedIdx > 0) {
@@ -996,8 +919,6 @@
                 }
             }
             (async () => {
-                // v10.0.15: 房主刚跳转游戏页时可能还在重试注册（unavailable-id），
-                // 此时所有信令服务器都 peer-unavailable。增加多轮重试，等待房主就绪。
                 const maxRounds = 4;
                 for (let round = 0; round < maxRounds; round++) {
                     let allUnavailable = true;
@@ -1034,7 +955,6 @@
     }
     window.xfwBootSync = boot;
 
-    // v10.5: 暴露消息处理入口（供测试/调试/扩展使用）
     window.playerHandleMessage = playerHandleMessage;
     window.hostHandleMessage = hostHandleMessage;
 
