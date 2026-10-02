@@ -4,7 +4,7 @@
  */
 (() => {
     // ===== 全局版本号（以后改版本号只需要改这里） =====
-    const GAME_VERSION = '10.0.14';
+    const GAME_VERSION = '10.0.15';
     window.GAME_VERSION = GAME_VERSION;
 
     // 自动同步页面上的版本号显示
