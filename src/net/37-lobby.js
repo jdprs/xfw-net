@@ -470,7 +470,8 @@
             Lobby.joining = false;
             Lobby.mySeatId = msg.playerId;
             localStorage.setItem('xfw_myseat', JSON.stringify({
-                playerId: msg.playerId, yourName: msg.yourName, code: Net.roomCode
+                playerId: msg.playerId, yourName: msg.yourName, code: Net.roomCode,
+                signalHost: (Net._lastSignal && Net._lastSignal.host) || null
             }));
             renderGuestList(msg);
             toast('已加入房间，你的座位是 ' + (msg.playerId + 1) + ' 号', 'success', '✅');
