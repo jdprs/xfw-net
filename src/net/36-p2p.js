@@ -14,28 +14,28 @@
     ];
 
     const Net = {
-        role: null,            // 'master' | 'player'
+        role: null,
         peer: null,
-        peerId: null,          // 本机 peer id
+        peerId: null,
         roomCode: null,
         myPlayerName: '',
-        masterPeerId: null,    // player 端：房主 peer id
-        conns: new Map(),      // master 端：peerId -> DataConnection
-        masterConn: null,      // player 端：到房主的连接
-        muted: new Set(),      // 房主端：被禁言 peerId 集合
-        onMessage: null,       // function(fromPeerId, msg)
+        masterPeerId: null,
+        conns: new Map(),
+        masterConn: null,
+        muted: new Set(),
+        onMessage: null,
         onPeerOpen: null,
         onPeerClose: null,
         _hbTimer: null,
         _hbTimeoutTimer: null,
         _lastPong: 0,
-        _peerOpened: false,   // 标记 peer 是否已经 open（open 后忽略非致命 error，避免疯狂弹 banner 卡死）
-        _lastErrorBanner: 0,  // error banner 防抖时间戳
-        _disconnectRedirectTimer: null,  // 连接建立后断线的"返回大厅"跳转 timer，便于 join 重试时取消
-        _lastSignal: null,       // 最后使用的信令服务器配置（用于重连）
-        _reconnectAttempts: 0,   // 重连尝试次数
-        _reconnectTimer: null,   // 重连定时器
-        _maxReconnectAttempts: 5 // 最大重连次数
+        _peerOpened: false,
+        _lastErrorBanner: 0,
+        _disconnectRedirectTimer: null,
+        _lastSignal: null,
+        _reconnectAttempts: 0,
+        _reconnectTimer: null,
+        _maxReconnectAttempts: 5
     };
     window.Net = Net;
     window.SIGNAL_SERVERS = SIGNAL_SERVERS;
@@ -53,7 +53,6 @@
     }
     window.netSetStatus = setStatus;
 
-    // 心跳：master 周期性 ping 所有；player 收到 ping 回 pong
     function startHeartbeat() {
         stopHeartbeat();
         Net._hbTimer = setInterval(() => {
@@ -77,14 +76,12 @@
     }
     window.netSendRaw = sendRaw;
 
-    // 玩家端：发送给房主
     function sendToMaster(obj) {
         Net._lastPong = Date.now();
         return sendRaw(Net.masterConn, obj);
     }
     window.netSendToMaster = sendToMaster;
 
-    // 房主端：广播给所有玩家
     function broadcastRaw(obj, excludePeerId) {
         Net.conns.forEach((conn, pid) => {
             if (excludePeerId && pid === excludePeerId) return;
@@ -93,14 +90,12 @@
     }
     window.netBroadcastRaw = broadcastRaw;
 
-    // 房主端：发给指定玩家
     function sendToPeer(peerId, obj) {
         const conn = Net.conns.get(peerId);
         return sendRaw(conn, obj);
     }
     window.netSendToPeer = sendToPeer;
 
-    // ---------- 房主：创建房间 ----------
     async function hostCreate(roomCode, signal, options) {
         return new Promise((resolve, reject) => {
             Net.role = 'master';
@@ -167,7 +162,6 @@
     }
     window.netHostCreate = hostCreate;
 
-    // ---------- 玩家：加入房间 ----------
     async function playerJoin(roomCode, signal, playerName) {
         return new Promise((resolve, reject) => {
             Net.role = 'player';
@@ -252,7 +246,6 @@
     }
     window.netPlayerJoin = playerJoin;
 
-    // ---------- 统一消息分发 ----------
     function handleIncoming(fromPeerId, data) {
         if (!data || typeof data !== 'object') return;
         if (data.type === 'ping') {
@@ -265,7 +258,6 @@
         if (typeof Net.onMessage === 'function') Net.onMessage(fromPeerId, data);
     }
 
-    // 玩家端自动重连（指数退避）
     function tryReconnect() {
         if (Net.role !== 'player') return;
         if (Net._reconnectAttempts >= Net._maxReconnectAttempts) {
@@ -278,17 +270,14 @@
         setStatus(`与房主断开，${delay / 1000}秒后第${Net._reconnectAttempts}次重连…`, 'connecting');
         Net._reconnectTimer = setTimeout(async () => {
             try {
-                // 清理旧连接
                 try { if (Net.masterConn) Net.masterConn.close(); } catch (e) {}
                 try { if (Net.peer) Net.peer.destroy(); } catch (e) {}
                 Net.masterConn = null;
                 Net.peer = null;
                 await playerJoin(Net.roomCode, Net._lastSignal, Net.myPlayerName);
-                // 重连成功，重置计数
                 Net._reconnectAttempts = 0;
                 setStatus('已重连房主', 'connected');
                 if (typeof showBanner === 'function') showBanner('已重新连接房主', 'success', null, '重连成功', '🔌');
-                // 通知上层重连成功
                 if (typeof Net.onReconnect === 'function') Net.onReconnect();
             } catch (e) {
                 console.warn('Reconnect attempt failed:', Net._reconnectAttempts, e);
@@ -298,6 +287,8 @@
     }
 
     function handlePeerDisconnect(peerId) {
+        // v10.0.16: 主动跳转游戏页时关闭连接是预期行为，不弹断连横幅
+        if (Net._navigating) return;
         if (Net.role === 'master') {
             if (!Net.conns.has(peerId)) return;
             Net.conns.delete(peerId);
@@ -308,7 +299,6 @@
             if (typeof showBanner === 'function') showBanner('与房主断开连接，正在尝试重连…', 'warning', null, '断线', '📡');
             if (Net._disconnectRedirectTimer) clearTimeout(Net._disconnectRedirectTimer);
             Net._disconnectRedirectTimer = null;
-            // 启动自动重连（仅在游戏页面中，大厅阶段由上层处理）
             if (Net._lastSignal && Net.roomCode && typeof window !== 'undefined' && window.GAME_MODE === 'player') {
                 tryReconnect();
             }
@@ -316,7 +306,6 @@
     }
     window.netHandlePeerDisconnect = handlePeerDisconnect;
 
-    // 关闭所有连接（注意：不修改状态栏，由上层决定显示什么）
     function netClose(reason) {
         stopHeartbeat();
         if (Net._reconnectTimer) { clearTimeout(Net._reconnectTimer); Net._reconnectTimer = null; }
