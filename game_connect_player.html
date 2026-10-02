@@ -44,29 +44,14 @@
         <button class="btn btn-warning btn-sm net-home-btn" id="net-home-btn" onclick="window.xfwReturnHome()">🏠 返回大厅</button>
     </div>
     <div class="container">
-        <!-- ===== 头部（v9.1 移除"一周年特别版"） ===== -->
         <header>
-            <h1 id="main-title">
-                🏆 小富翁股票投资游戏 v10.0
-                <!-- v10.0: P2P 联机 -->
-            </h1>
+            <h1 id="main-title">🏆 小富翁股票投资游戏 v10.0</h1>
             <p class="subtitle">A股 · B股 · C股 · D股 · 自建股 · 彩票 · 外接AI · 成就 · 决策机制</p>
             <p class="subtitle" style="font-size:0.8rem;">✨ 整元交易 · 总资产奖励 · 盈亏显示 · 外接AI全信息 ✨</p>
             <p class="subtitle" style="font-size:0.8rem;">总资产低于阈值即破产 · v9.1 收盘统一破产检测 + 资助金</p>
         </header>
-
-        <!-- ===== 横幅容器 ===== -->
         <div id="banner-container"></div>
-
-        <!-- ===== 保存通知 ===== -->
         <div id="save-notification" class="save-notification">✅ 已保存</div>
-
-        <!-- ================================================================
-        联机页无开始界面（v10.1）：
-        以下 #game-setup 仅保留引擎初始化所需的隐藏配置输入，
-        不渲染任何"游戏设置/单机开始/联机开始"等开始界面元素。
-        玩家/房主进入页面后直接进入联机流程，通过顶部状态栏返回大厅。
-        ================================================================ -->
         <div class="game-setup" id="game-setup" style="display:none;">
             <input type="number" id="human-players" value="1" />
             <input type="number" id="ai-players" value="0" />
@@ -81,376 +66,43 @@
             <input type="number" id="admin-bankruptcy-threshold" value="100" />
             <input type="number" id="admin-bankruptcy-fund" value="1000" />
         </div>
-
-        <!-- ===== 游戏主界面 ===== -->
         <div id="game-main" style="display:none;">
             <div class="game-info">
-                <div class="info-item">
-                    <h3>🏦 银行资产</h3>
-                    <div class="info-value" id="bank-assets">¥200,000</div>
-                    <p id="bank-warning" class="bank-warning">⚠️ 银行告急！掠夺模式激活</p>
-                </div>
-                <div class="info-item">
-                    <h3>📅 当前轮数</h3>
-                    <div class="info-value" id="current-round">1 / 60</div>
-                </div>
-                <div class="info-item">
-                    <h3>📈 市场概况</h3>
-                    <p>A股 <span id="stock-a-status">正常</span></p>
-                    <p>B股 <span id="stock-b-status">正常</span></p>
-                    <p>C股 <span id="stock-c-status">正常</span></p>
-                    <p>D股 <span id="stock-d-status">正常</span></p>
-                    <div id="custom-stock-status" style="font-size:0.75rem;"></div>
-                    <div id="dark-horse-display" style="font-size:0.75rem;color:var(--dark-horse-color);margin-top:2px;"></div>
-                </div>
+                <div class="info-item"><h3>🏦 银行资产</h3><div class="info-value" id="bank-assets">¥200,000</div><p id="bank-warning" class="bank-warning">⚠️ 银行告急！掠夺模式激活</p></div>
+                <div class="info-item"><h3>📅 当前轮数</h3><div class="info-value" id="current-round">1 / 60</div></div>
+                <div class="info-item"><h3>📈 市场概况</h3><p>A股 <span id="stock-a-status">正常</span></p><p>B股 <span id="stock-b-status">正常</span></p><p>C股 <span id="stock-c-status">正常</span></p><p>D股 <span id="stock-d-status">正常</span></p><div id="custom-stock-status" style="font-size:0.75rem;"></div><div id="dark-horse-display" style="font-size:0.75rem;color:var(--dark-horse-color);margin-top:2px;"></div></div>
             </div>
-
-            <div class="leaderboard">
-                <div class="section-header">
-                    <div class="section-title">🏆 实时排行榜</div>
-                </div>
-                <div id="leaderboard-content"></div>
-            </div>
-
-            <div class="round-info">
-                <div class="round-number" id="round-display">第 1 轮</div>
-                <p style="font-size:0.85rem;">点击「决策」开始操作，完成后点击「完成」</p>
-                <div class="hundred-rule">💰 所有金额以元为单位（整数）</div>
-                <div class="decision-progress" id="decision-progress">📊 决策进度：<span class="highlight" id="decision-count">0/0</span> 已完成</div>
-            </div>
-
+            <div class="leaderboard"><div class="section-header"><div class="section-title">🏆 实时排行榜</div></div><div id="leaderboard-content"></div></div>
+            <div class="round-info"><div class="round-number" id="round-display">第 1 轮</div><p style="font-size:0.85rem;">点击「决策」开始操作，完成后点击「完成」</p><div class="hundred-rule">💰 所有金额以元为单位（整数）</div><div class="decision-progress" id="decision-progress">📊 决策进度：<span class="highlight" id="decision-count">0/0</span> 已完成</div></div>
             <div class="players-container" id="players-container"></div>
-
-            <!-- v9.1: 在按钮组中添加「直接结束游戏」 -->
             <div class="game-controls" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:16px;">
                 <button class="btn btn-success" id="close-market-btn" disabled>📊 收盘</button>
                 <button class="btn btn-danger" id="end-game-btn" disabled>⏹ 直接结束游戏</button>
                 <button class="btn btn-warning" id="save-game-btn">💾 保存</button>
                 <button class="btn btn-gold" id="export-code-btn">📋 导出存档码</button>
                 <button class="btn btn-gold" id="import-code-btn">📥 导入存档码</button>
-                <!-- v9.2: 历史记录 -->
                 <button class="btn btn-primary btn-sm" id="history-btn">📜 历史记录</button>
                 <button class="btn btn-outline" id="new-game-btn">🔄 新游戏</button>
                 <button class="btn btn-primary btn-sm" id="help-btn">❓ 帮助</button>
             </div>
-
-            <div class="charts-container">
-                <div class="chart-card">
-                    <div class="section-header"><div class="section-title">📈 资产趋势</div></div>
-                    <canvas id="assets-chart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <div class="section-header"><div class="section-title">📉 股票涨跌</div></div>
-                    <canvas id="stocks-chart"></canvas>
-                </div>
-            </div>
-            <!-- v9.2: 展开图表按钮（查看每个玩家/每只股票的涨跌图） -->
-            <div class="expand-charts-row">
-                <button class="btn btn-gold btn-sm" id="expand-charts-btn">📊 展开图表 · 查看每个玩家/股票的涨跌图</button>
-            </div>
+            <div class="charts-container"><div class="chart-card"><div class="section-header"><div class="section-title">📈 资产趋势</div></div><canvas id="assets-chart"></canvas></div><div class="chart-card"><div class="section-header"><div class="section-title">📉 股票涨跌</div></div><canvas id="stocks-chart"></canvas></div></div>
+            <div class="expand-charts-row"><button class="btn btn-gold btn-sm" id="expand-charts-btn">📊 展开图表 · 查看每个玩家/股票的涨跌图</button></div>
         </div>
-
-        <!-- ===== 日志面板 ===== -->
-        <div class="game-history hidden" id="game-history">
-            <div class="section-header">
-                <div class="section-title">📜 游戏日志</div>
-                <div style="display:flex; gap:4px;">
-                    <button class="toggle-panel-btn" id="toggle-panel-btn" title="折叠/展开">➖</button>
-                    <button class="btn btn-primary btn-sm" id="toggle-logs">展开/收起</button>
-                </div>
-            </div>
-            <div class="history-log" id="history-log"><div class="log-entry">🎮 游戏准备就绪</div></div>
-        </div>
-
-        <!-- ===== 展开日志按钮 ===== -->
+        <div class="game-history hidden" id="game-history"><div class="section-header"><div class="section-title">📜 游戏日志</div><div style="display:flex; gap:4px;"><button class="toggle-panel-btn" id="toggle-panel-btn" title="折叠/展开">➖</button><button class="btn btn-primary btn-sm" id="toggle-logs">展开/收起</button></div></div><div class="history-log" id="history-log"><div class="log-entry">🎮 游戏准备就绪</div></div></div>
         <button id="show-log-btn" style="display: none;">📜 展开日志</button>
-
-        <!-- ===== 外接AI指令面板 ===== -->
-        <div class="modal-overlay" id="eai-overlay">
-            <div class="eai-modal-box">
-                <div class="panel-header">
-                    <h3 id="eai-panel-title">🌐 外接AI 指令面板</h3>
-                    <button class="panel-close" id="eai-panel-close">×</button>
-                </div>
-                <div class="eai-body">
-                    <div class="eai-tabs">
-                        <button class="active" data-tab="prompt">📋 指令代码</button>
-                        <button data-tab="response">📥 粘贴回复</button>
-                    </div>
-                    <div class="eai-content">
-                        <div id="eai-tab-prompt">
-                            <div class="eai-prompt-box" id="eai-prompt-box">正在生成指令...</div>
-                        </div>
-                        <div id="eai-tab-response" style="display:none;">
-                            <textarea id="eai-response-text" placeholder="粘贴外部AI的回复（JSON格式）..." rows="6"></textarea>
-                        </div>
-                    </div>
-                    <div class="eai-toolbar">
-                        <button class="btn-sm btn-sm-cyan" id="eai-copy-prompt">📋 复制指令</button>
-                        <span class="hint">复制到外部AI，将回复粘贴到右侧</span>
-                    </div>
-                    <div class="eai-actions">
-                        <button class="btn btn-success btn-sm" id="eai-execute-response">⚡ 执行决策</button>
-                        <button class="btn btn-warning btn-sm" id="eai-clear-response">清空</button>
-                        <button class="btn btn-primary btn-sm" id="eai-panel-close-btn">关闭面板</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== 成就馆 ===== -->
-        <div class="achievement-modal" id="achievement-modal">
-            <div class="achievement-content">
-                <h2>🏅 成就馆</h2>
-                <div class="achievement-stats" id="achievement-stats">已解锁 0 / 9 个成就</div>
-                <div class="achievement-grid" id="achievement-grid"></div>
-                <button class="achievement-close-btn" id="achievement-close-btn">关闭</button>
-            </div>
-        </div>
-
+        <div class="modal-overlay" id="eai-overlay"><div class="eai-modal-box"><div class="panel-header"><h3 id="eai-panel-title">🌐 外接AI 指令面板</h3><button class="panel-close" id="eai-panel-close">×</button></div><div class="eai-body"><div class="eai-tabs"><button class="active" data-tab="prompt">📋 指令代码</button><button data-tab="response">📥 粘贴回复</button></div><div class="eai-content"><div id="eai-tab-prompt"><div class="eai-prompt-box" id="eai-prompt-box">正在生成指令...</div></div><div id="eai-tab-response" style="display:none;"><textarea id="eai-response-text" placeholder="粘贴外部AI的回复（JSON格式）..." rows="6"></textarea></div></div><div class="eai-toolbar"><button class="btn-sm btn-sm-cyan" id="eai-copy-prompt">📋 复制指令</button><span class="hint">复制到外部AI，将回复粘贴到右侧</span></div><div class="eai-actions"><button class="btn btn-success btn-sm" id="eai-execute-response">⚡ 执行决策</button><button class="btn btn-warning btn-sm" id="eai-clear-response">清空</button><button class="btn btn-primary btn-sm" id="eai-panel-close-btn">关闭面板</button></div></div></div>
+        <div class="achievement-modal" id="achievement-modal"><div class="achievement-content"><h2>🏅 成就馆</h2><div class="achievement-stats" id="achievement-stats">已解锁 0 / 9 个成就</div><div class="achievement-grid" id="achievement-grid"></div><button class="achievement-close-btn" id="achievement-close-btn">关闭</button></div></div>
         <div class="version">基氮实验室 版权所有 · v10.0</div>
         <div class="version">版本号 v10.0</div>
-        <!-- v10.0 大厅初始化标记 -->
         <div id="mp-lobby-root" style="display:none;"></div>
     </div>
-
-    <!-- ===== 结果模态框 ===== -->
-    <div class="results-modal" id="results-modal">
-        <div class="results-content">
-            <h2>🎉 游戏结束</h2>
-            <div id="winner-message"></div>
-            <div id="ranking-list"></div>
-            <button class="btn btn-gold" id="restart-btn" style="margin-top:14px;width:100%;">🔄 重新开始</button>
-        </div>
-    </div>
-
-    <!-- ===== 事件模态框 ===== -->
-    <div class="event-modal" id="event-modal">
-        <div class="event-content" id="event-content">
-            <div class="event-icon" id="event-icon">📢</div>
-            <div class="event-title" id="event-title">事件</div>
-            <div class="event-description" id="event-description">描述</div>
-            <button class="btn btn-primary" id="event-close-btn">确定</button>
-        </div>
-    </div>
-
-    <!-- ===== 通用信息模态框 ===== -->
-    <div class="modal-overlay" id="info-modal">
-        <div class="modal-box">
-            <h3 id="info-modal-title">📢 信息</h3>
-            <div class="modal-body" id="info-modal-body"></div>
-            <div class="modal-actions">
-                <button class="btn btn-primary" id="info-modal-ok">确定</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-    帮助模态框 — v9.1 增强版（隐藏高级设置相关内容）
-    ================================================================ -->
-    <div class="help-modal" id="help-modal">
-        <div class="help-content" id="help-content-body">
-            <h2>📖 游戏规则详解</h2>
-
-            <div class="help-section">
-                <h3>🎯 游戏目标</h3>
-                <p>在 <span class="highlight">总轮数</span> 内，通过股票投资、彩票、自建股等方式积累资产，成为总资产最高的玩家。</p>
-                <p>总资产 = 💵 现金 + 📈 股票市值（持股数 × 股价）+ 🏢 自建股投资。</p>
-                <div class="help-rule-box">
-                    <p>⚠️ 总资产低于 <span class="danger">破产阈值</span>（默认 100 元）即判定 <span class="danger">破产</span>，清空所有资产。</p>
-                    <p>💡 v9.1 改进：收盘时统一检测破产，并自动发放 <span class="highlight">破产救助金</span>（默认 1000 元），帮助玩家继续游戏。</p>
-                </div>
-            </div>
-
-            <div class="help-section">
-                <h3>📊 股票类型</h3>
-                <p>四只基础股票，各有不同的波动特性，适合不同风险偏好的玩家。</p>
-                <div class="stock-info-grid" id="help-stock-grid"></div>
-                <p style="margin-top:6px;font-size:0.85rem;">💡 股价每日变动，涨跌幅基于算法生成，受 <span class="highlight">市场事件</span> 和 <span class="highlight">黑马股</span> 影响。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>🐴 黑马股</h3>
-                <p>每轮有 <span class="highlight">概率</span> 随机一只股票成为「黑马」，其涨跌幅乘以 <span class="highlight">倍率</span>（默认 2 倍）。</p>
-                <p>黑马股出现时会有横幅提示，抓住机会可以获得超额收益！</p>
-            </div>
-
-            <div class="help-section">
-                <h3>🔮 股神预测</h3>
-                <p>每轮你可以对某只股票进行 <span class="highlight">方向预测</span>（上涨 / 下跌 / 持平），押注金额上限为 <span class="danger">总资产的 5%</span>。</p>
-                <ul>
-                    <li>✅ <span class="success">预测正确</span>：获得押注 × <span class="highlight">2.5</span> 倍奖金。</li>
-                    <li>❌ <span class="danger">预测错误</span>：押金 <span class="danger">全部没收</span>（不返还）。</li>
-                    <li>📌 <span class="info">持平判定</span>：股价变化在 <span class="highlight">±1.5%</span> 以内视为持平。</li>
-                    <li>📌 预测 <span class="highlight">上涨/下跌</span> 但实际持平时，押金 <span class="danger">没收</span>。</li>
-                </ul>
-                <p style="font-size:0.85rem;margin-top:4px;">⚠️ A股 <span class="success">只涨不跌</span>，因此下跌选项不可用。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>⭐ 投资组合评级</h3>
-                <p>系统根据你的 <span class="highlight">持仓分散度</span> 和 <span class="highlight">总资产</span> 进行评级（S / A / B / C / D），评级越高奖励越多。</p>
-                <ul>
-                    <li><span class="highlight">S 级</span>：奖励总资产 × 15%</li>
-                    <li><span class="highlight">A 级</span>：奖励总资产 × 10%</li>
-                    <li><span class="highlight">B 级</span>：奖励总资产 × 6%</li>
-                    <li><span class="highlight">C 级</span>：奖励总资产 × 3%</li>
-                    <li><span class="highlight">D 级</span>：无奖励</li>
-                </ul>
-                <p style="font-size:0.85rem;">💡 分散投资于多只股票，避免单一持仓过重，有助于获得更高评级。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>🎫 彩票系统</h3>
-                <p>每轮可购买多种彩票，每张彩票有 <span class="highlight">中奖概率</span> 和 <span class="danger">诈骗风险</span>。</p>
-                <ul>
-                    <li>🎉 <span class="success">中奖</span>：获得现金 × 奖励比例 + 奖池分成。</li>
-                    <li>💀 <span class="danger">诈骗</span>：可能被罚款甚至 <span class="danger">破产</span>！</li>
-                </ul>
-                <p style="font-size:0.85rem;">⚠️ 彩票是高风险高回报的玩法，请谨慎参与！</p>
-            </div>
-
-            <div class="help-section">
-                <h3>✨ 自建股</h3>
-                <p>玩家可以 <span class="highlight">创建</span> 自己的股票，设定上涨利率和利润留存比例。</p>
-                <ul>
-                    <li>创建者 <span class="danger">不能</span> 投资自己创建的股票。</li>
-                    <li>其他玩家可以投资自建股（以金额计），共享涨跌。</li>
-                    <li>自建股也会受到 <span class="highlight">黑马股</span> 机制影响。</li>
-                </ul>
-            </div>
-
-            <div class="help-section">
-                <h3>🏅 成就系统</h3>
-                <p>游戏内置 <span class="highlight">9 项成就</span>（v9.1 移除「破产者」成就），达成后按 <span class="highlight">当前总资产</span> 比例获得奖励。</p>
-                <p>成就包括：首次投资、投资达人、股神、彩票幸运儿、彩票倒霉蛋、百万富翁、交易狂、稳健投资者、冒险家。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>⚡ 掠夺机制</h3>
-                <p>当 <span class="highlight">银行资产</span> 低于 <span class="danger">掠夺阈值</span>（默认 ¥8,000）时，触发掠夺模式。</p>
-                <p>系统会从 <span class="highlight">高资产玩家</span> 中征收 "掠夺税"，补充银行资金，防止银行破产。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>🚫 股票跑路（v9.3）</h3>
-                <p>掠夺模式触发后，<span class="danger">下一轮</span>有 <span class="highlight">50% 概率</span>随机封掉一只股票（老板跑路）。</p>
-                <ul>
-                    <li>被封股票：所有玩家<span class="danger">持仓清零</span>，无法买卖、无法预测，价格冻结。</li>
-                    <li>银行仍告急时，下一轮继续 50% 概率封股，可能同时封多只。</li>
-                    <li><span class="highlight">4 轮后</span>该股票重新上市，价格重置为初始价（默认 ¥100）。</li>
-                    <li>⚠️ 之前投资的持仓<span class="danger">不会恢复</span>，损失由玩家自行承担。</li>
-                </ul>
-                <p style="font-size:0.8rem;color:var(--text-secondary);">示例：第 11 轮触发掠夺 → 第 12 轮封 A 股 → 第 16 轮 A 股重开（价格重置）。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>🌐 外接AI</h3>
-                <p>支持接入 <span class="highlight">外部AI</span>（如 ChatGPT、Claude 等）代为决策。</p>
-                <ul>
-                    <li><span class="info">指令模式</span>：复制系统生成的指令文本，粘贴到外部AI，再将回复粘贴回游戏。</li>
-                    <li><span class="info">API模式</span>：配置 API 密钥和端点，系统自动调用外部AI决策。</li>
-                </ul>
-                <p style="font-size:0.85rem;">💡 外接AI拥有完整的市场信息和决策能力，可帮你制定更优策略。</p>
-                <p style="font-size:0.85rem;">📌 v9.1 外接AI支持：买入/卖出股票、投资/取回自建股、购买彩票、股神预测、创建自建股等全部操作。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>🌐 联机玩法 (v10.0)</h3>
-                <p>v10.0 新增基于 <span class="highlight">P2P 点对点</span> 的联机对战功能，无需服务器，浏览器直连。</p>
-                <ul>
-                    <li><span class="info">创建房间</span>：点击「联机开始」→ 输入昵称 → 创建房间，系统生成 6 位房间号。</li>
-                    <li><span class="info">加入房间</span>：朋友输入 6 位房间号加入。</li>
-                    <li><span class="info">等待室</span>：房主可设置房间人数、内置/外接 AI 数、总轮数；等待 5 分钟内随时「开始游戏」。</li>
-                    <li><span class="info">聊天</span>：游戏右下角聊天面板可与其他玩家交流，房主可禁言刷屏者。</li>
-                    <li><span class="danger">房主权限</span>：房主作为权威端维护状态，可「跳过回合」「强制收盘」「禁言」「结束游戏」。</li>
-                    <li>玩家端不运行计算，所有操作发送给房主后由房主统一下发最新状态，保证所有人数据一致。</li>
-                </ul>
-                <p style="font-size:0.85rem;">💡 联机使用免费公共信令服务器（peerjs），如连不上可在创建房间时切换信令服务器或填写自建服务器地址。</p>
-            </div>
-
-            <div class="help-section">
-                <h3>📌 操作提示</h3>
-                <ul>
-                    <li>所有金额均为 <span class="highlight">整数（元）</span>，输入股份数后系统自动计算金额。</li>
-                    <li>点击「<span class="highlight">上限</span>」按钮自动填入当前现金可买的最大股数。</li>
-                    <li>每轮点击「<span class="highlight">决策</span>」开始操作，完成后点击「<span class="highlight">完成</span>」。</li>
-                    <li>所有玩家完成决策后，点击「<span class="highlight">收盘</span>」进入下一轮。</li>
-                    <li>游戏支持 <span class="highlight">存档</span> 和 <span class="highlight">存档码</span> 导出/导入，方便跨设备游玩。</li>
-                    <li>v9.1 新增「<span class="highlight">直接结束游戏</span>」按钮，可随时终止当前对局。</li>
-                </ul>
-            </div>
-
-            <!-- v9.1: 帮助复制按钮 -->
-            <div class="help-copy-row">
-                <button class="btn btn-gold" id="help-copy-btn">📋 复制帮助内容</button>
-                <button class="btn btn-primary" id="help-close-btn">关闭帮助</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== 存档码模态框 ===== -->
-    <div class="code-modal" id="code-modal">
-        <div class="code-modal-content">
-            <h3 id="code-modal-title">📋 存档码</h3>
-            <textarea id="code-textarea" rows="4" placeholder="存档码..."></textarea>
-            <div class="btn-row">
-                <button class="btn btn-primary btn-sm" id="code-copy-btn">📋 复制</button>
-                <button class="btn btn-success btn-sm" id="code-import-confirm-btn" style="display:none;">📥 导入</button>
-                <button class="btn btn-warning btn-sm" id="code-close-btn">关闭</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ===== 历史记录模态框 (v9.2) ===== -->
-    <div class="history-modal" id="history-modal">
-        <div class="history-content">
-            <div class="section-header">
-                <div class="section-title">📜 历史记录</div>
-                <button class="btn btn-warning btn-sm" id="history-close-btn">关闭</button>
-            </div>
-            <div id="history-summary" class="history-summary"></div>
-            <div id="history-list" class="history-list"></div>
-        </div>
-    </div>
-
-    <!-- ===== 展开图表总览 (v9.2) ===== -->
-    <div class="expand-overlay" id="expand-overlay">
-        <div class="expand-content">
-            <div class="section-header">
-                <div class="section-title">📊 图表总览</div>
-                <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                    <button class="btn btn-primary btn-sm expand-tab active" data-tab="players">👤 玩家涨跌</button>
-                    <button class="btn btn-primary btn-sm expand-tab" data-tab="stocks">📈 股票涨跌</button>
-                    <button class="btn btn-warning btn-sm" id="expand-close-btn">✕ 关闭</button>
-                </div>
-            </div>
-            <div class="expand-grid" id="expand-grid"></div>
-        </div>
-    </div>
-
-    <!-- ================================================================
-    JavaScript  —  v9.3 增强版
-    核心改动：
-      1. 【v9.1】版本号更新为 v9.1，移除"一周年特别版"
-      2. 【v9.1】破产检测移至收盘时统一处理
-      3. 【v9.1】新增破产资助金机制（高级设置可调）
-      4. 【v9.1】移除"破产者"成就奖励
-      5. 【v9.1】新增"直接结束游戏"按钮
-      6. 【v9.1】帮助内容隐藏高级设置相关
-      7. 【v9.1】保留 :before 和 :hover 效果
-      8. 代码添加详细注释，方便后续 AI 维护
-      9. 所有 UI 自定义，无系统弹窗，适配移动端
-    ================================================================
-    v9.2 新增：
-      1. 修复：取消决策时回滚本轮预测（退还押金、清除记录），
-         并新增「撤销预测」按钮，解决取消后无法再次预测/决策的问题
-      2. 新增历史记录面板：每轮收盘时记录快照（股价/资产/事件），
-         可通过「历史记录」按钮查看
-      3. 新增「展开图表」：在图表下方按钮进入，查看每个玩家
-         与每只股票的涨跌走势图
-      9. 所有 UI 自定义，无系统弹窗，适配移动端
-    ================================================================ -->
-    <script src="src/main.js?v=10.0.14"></script>
+    <div class="results-modal" id="results-modal"><div class="results-content"><h2>🎉 游戏结束</h2><div id="winner-message"></div><div id="ranking-list"></div><button class="btn btn-gold" id="restart-btn" style="margin-top:14px;width:100%;">🔄 重新开始</button></div></div>
+    <div class="event-modal" id="event-modal"><div class="event-content"><div class="event-icon" id="event-icon">📢</div><div class="event-title" id="event-title">事件</div><div class="event-description" id="event-description">描述</div><button class="btn btn-primary" id="event-close-btn">确定</button></div></div>
+    <div class="modal-overlay" id="info-modal"><div class="modal-box"><h3 id="info-modal-title">📢 信息</h3><div class="modal-body" id="info-modal-body"></div><div class="modal-actions"><button class="btn btn-primary" id="info-modal-ok">确定</button></div></div></div>
+    <div class="help-modal" id="help-modal"><div class="help-content" id="help-content-body"></div></div>
+    <div class="code-modal" id="code-modal"><div class="code-modal-content"><h3 id="code-modal-title">📋 存档码</h3><textarea id="code-textarea" rows="4" placeholder="存档码..."></textarea><div class="btn-row"><button class="btn btn-primary btn-sm" id="code-copy-btn">📋 复制</button><button class="btn btn-success btn-sm" id="code-import-confirm-btn" style="display:none;">📥 导入</button><button class="btn btn-warning btn-sm" id="code-close-btn">关闭</button></div></div></div>
+    <div class="history-modal" id="history-modal"><div class="history-content"><div class="section-header"><div class="section-title">📜 历史记录</div><button class="btn btn-warning btn-sm" id="history-close-btn">关闭</button></div><div id="history-summary" class="history-summary"></div><div id="history-list" class="history-list"></div></div></div>
+    <div class="expand-overlay" id="expand-overlay"><div class="expand-content"><div class="section-header"><div class="section-title">📊 图表总览</div><div style="display:flex; gap:6px; flex-wrap:wrap;"><button class="btn btn-primary btn-sm expand-tab active" data-tab="players">👤 玩家涨跌</button><button class="btn btn-primary btn-sm expand-tab" data-tab="stocks">📈 股票涨跌</button><button class="btn btn-warning btn-sm" id="expand-close-btn">✕ 关闭</button></div></div><div class="expand-grid" id="expand-grid"></div></div></div>
+    <script src="src/main.js?v=10.0.15"></script>
 </body>
 </html>
