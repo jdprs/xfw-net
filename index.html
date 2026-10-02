@@ -6,7 +6,6 @@
     <title>小富翁股票投资游戏 v10.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js">
     </script>
-    <!-- PeerJS: 主CDN jsdelivr，失败自动切换 unpkg → cdnjs -->
     <script>
         (function(){
             var peerjsUrls = [
@@ -35,7 +34,6 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-    <!-- ===== 健康游戏忠告 ===== -->
     <div id="health-modal">
         <div class="health-box">
             <h2>🛡️ 健康游戏忠告</h2>
@@ -52,31 +50,24 @@
         </div>
     </div>
 
-    <!-- ===== 悬浮反馈按钮（固定右下角，JS强制打开） ===== -->
     <div id="feedback-fab" onclick="window.open('https://wj.qq.com/s2/27940380/q356/','_blank')"
          style="position:fixed;right:16px;bottom:16px;z-index:99999;background:var(--accent,#4a9eff);color:#fff;padding:10px 16px;border-radius:24px;font-size:0.85rem;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);user-select:none;">
         📮 我要反馈
     </div>
 
     <div class="container">
-        <!-- ===== 头部（v9.1 移除"一周年特别版"） ===== -->
         <header>
             <h1 id="main-title">
                 🏆 小富翁股票投资游戏 v10.0
-                <!-- v10.0: P2P 联机 -->
             </h1>
             <p class="subtitle">在多种玩法中成为最终赢家！</p>
             <p class="subtitle" style="font-size:0.8rem;"> 整元交易</p>
             <p class="subtitle" style="font-size:0.8rem;">总资产低于阈值即破产</p>
         </header>
 
-        <!-- ===== 横幅容器 ===== -->
         <div id="banner-container"></div>
-
-        <!-- ===== 保存通知 ===== -->
         <div id="save-notification" class="save-notification">✅ 已保存</div>
 
-        <!-- ===== 密码模态框 ===== -->
         <div class="password-modal" id="password-modal">
             <div class="password-box">
                 <h3>🔐 输入密码</h3>
@@ -88,7 +79,6 @@
             </div>
         </div>
 
-        <!-- ===== 设置界面 ===== -->
         <div class="game-setup" id="game-setup">
             <h2>🎮 游戏设置</h2>
             <div class="setup-item">
@@ -107,7 +97,6 @@
                 <div class="setup-note">10~200轮</div>
             </div>
 
-            <!-- 外接AI配置 -->
             <div class="external-ai-section">
                 <div class="section-title">🌐 外接AI配置 <span style="font-size:0.7rem;color:var(--text-secondary);font-weight:400;">（独立于场内AI）</span></div>
                 <div class="external-ai-list" id="external-ai-list"><div style="color:var(--text-secondary);font-size:0.85rem;padding:8px 0;opacity:0.6;">暂无外接AI，点击下方添加</div></div>
@@ -115,7 +104,6 @@
                 <div class="setup-note" style="margin-top:6px;">外接AI支持指令模式（复制粘贴）或API模式（自动调用）</div>
             </div>
 
-            <!-- ===== 管理员面板 ===== -->
             <div class="admin-panel" id="admin-panel">
                 <h3>🔧 高级设置</h3>
                 <div class="admin-tabs">
@@ -192,7 +180,6 @@
             </div>
         </div>
 
-        <!-- ===== 游戏主界面 ===== -->
         <div id="game-main" style="display:none;">
             <div class="game-info">
                 <div class="info-item">
@@ -521,8 +508,8 @@
         </div>
     </div>
 
-    <script src="src/main.js?v=10.0.14"></script>
-    <script src="src/net/36-p2p.js?v=10.0.14"></script>
-    <script src="src/net/37-lobby.js?v=10.0.14"></script>
+    <script src="src/main.js?v=10.0.15"></script>
+    <script src="src/net/36-p2p.js?v=10.0.15"></script>
+    <script src="src/net/37-lobby.js?v=10.0.15"></script>
 </body>
 </html>
