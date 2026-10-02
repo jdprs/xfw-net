@@ -927,7 +927,9 @@
             }
             renderReconnectWait();
             (async () => {
-                const retryDelays = [0, 500, 1000, 2000, 3000];
+                // v10.0.15: 页面跳转后旧 PeerID 可能仍被信令服务器占用（unavailable-id），
+                // 免费 PeerJS 云服务器释放旧注册通常需要 10~30 秒，加长重试间隔与总时长
+                const retryDelays = [0, 1000, 2000, 3000, 5000, 5000, 5000];
                 for (let attempt = 0; attempt < retryDelays.length; attempt++) {
                     if (retryDelays[attempt]) {
                         await new Promise(resolveDelay => setTimeout(resolveDelay, retryDelays[attempt]));
@@ -958,6 +960,7 @@
                             signal: cfg.signal
                         });
                         netClose();
+                        if (typeof netSetStatus === 'function') netSetStatus('等待信令服务器释放房间…（第' + (attempt + 1) + '次重试）', 'connecting');
                         if (!e || e.type !== 'unavailable-id' || attempt === retryDelays.length - 1) {
                             goLobbyAfter(e && e.type === 'unavailable-id'
                                 ? '房间 ID 仍被占用，返回大厅后请重新创建房间'
@@ -983,23 +986,45 @@
             // 房主重建游戏页时用的是创建房间时选择的信令服务器（cfg.signal），不一定是 [0]；
             // 之前硬编码 [0] 会导致房主在其它信令服务器时玩家永远 peer-unavailable、连不上。
             const servers = (window.SIGNAL_SERVERS || []).filter(function (s) { return !s.custom; });
+            // v10.0.15: 优先尝试上次成功连接的信令服务器，减少轮询耗时
+            if (my.signalHost) {
+                const savedIdx = servers.findIndex(s => s.host === my.signalHost);
+                if (savedIdx > 0) {
+                    const saved = servers[savedIdx];
+                    servers.splice(savedIdx, 1);
+                    servers.unshift(saved);
+                }
+            }
             (async () => {
-                for (let i = 0; i < servers.length; i++) {
-                    const signal = servers[i];
-                    updatePageLoadingText('正在通过 ' + signal.label + ' 连接房主…（' + (i + 1) + '/' + servers.length + '）');
-                    try {
-                        await netPlayerJoin(my.code, signal, my.yourName);
-                        Net.onMessage = playerHandleMessage;
-                        Net.onReconnect = function () {
-                            // 重连成功：playerJoin 已自动发送 join_request，房主会回发 state_sync
-                            hidePageLoading();
-                            if (document.getElementById('game-main')) document.getElementById('game-main').style.display = 'block';
-                        };
-                        updatePageLoadingText('已连接房主，等待游戏开始…');
-                        toast('已连接房主，等待游戏开始…', 'info', '🔌');
-                        return;
-                    } catch (e) {
-                        try { netClose(); } catch (_) {}
+                // v10.0.15: 房主刚跳转游戏页时可能还在重试注册（unavailable-id），
+                // 此时所有信令服务器都 peer-unavailable。增加多轮重试，等待房主就绪。
+                const maxRounds = 4;
+                for (let round = 0; round < maxRounds; round++) {
+                    let allUnavailable = true;
+                    for (let i = 0; i < servers.length; i++) {
+                        const signal = servers[i];
+                        updatePageLoadingText('正在通过 ' + signal.label + ' 连接房主…（第' + (round + 1) + '轮）');
+                        try {
+                            await netPlayerJoin(my.code, signal, my.yourName);
+                            Net.onMessage = playerHandleMessage;
+                            Net.onReconnect = function () {
+                                hidePageLoading();
+                                if (document.getElementById('game-main')) document.getElementById('game-main').style.display = 'block';
+                            };
+                            updatePageLoadingText('已连接房主，等待游戏开始…');
+                            toast('已连接房主，等待游戏开始…', 'info', '🔌');
+                            return;
+                        } catch (e) {
+                            try { netClose(); } catch (_) {}
+                            if (!e || e.type !== 'peer-unavailable') allUnavailable = false;
+                        }
+                    }
+                    if (round < maxRounds - 1 && allUnavailable) {
+                        const waitMs = 2000 * (round + 1);
+                        updatePageLoadingText('房主正在启动，' + (waitMs / 1000) + '秒后重试…');
+                        await new Promise(r => setTimeout(r, waitMs));
+                    } else if (!allUnavailable) {
+                        break;
                     }
                 }
                 hidePageLoading();
