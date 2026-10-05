@@ -15,9 +15,10 @@
             panel.classList.add('hidden');
             panel.classList.remove('collapsed');
             logPanelVisible = false;
-            // 隐藏面板时应保留「展开日志」按钮，否则面板被隐藏后再无入口打开
+            // 游戏未开始（重连/等待阶段）时，面板与「展开日志」按钮都隐藏；
+            // 游戏开始后由 showLogPanel 显示面板，折叠时再由 toggleLogPanel 显示展开按钮
             const btn = document.getElementById('show-log-btn');
-            if (btn) btn.style.display = 'flex';
+            if (btn) btn.style.display = 'none';
             if (typeof window.placeNetStatusBar === 'function') window.placeNetStatusBar();
         }
 

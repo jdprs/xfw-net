@@ -417,6 +417,39 @@
                 if (typeof window.placeNetStatusBar === 'function') window.placeNetStatusBar();
             });
 
+            // ---- 标题点击 → Star 引导浮窗（自定义 DOM 广告） ----
+            const starTitleEl = $id('main-title');
+            if (starTitleEl) {
+                starTitleEl.style.cursor = 'pointer';
+                starTitleEl.title = '⭐ 支持一下';
+                starTitleEl.addEventListener('click', function() {
+                    const oldPop = $id('star-popup');
+                    if (oldPop) oldPop.remove();
+                    const pop = document.createElement('div');
+                    pop.id = 'star-popup';
+                    pop.className = 'star-popup';
+                    pop.innerHTML = '<a href="https://github.com/jdprs/xfw-net" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;">⭐ 随手点个Star，支持一下<span class="sp-close" id="sp-close">×</span></a>';
+                    const rect = this.getBoundingClientRect();
+                    pop.style.top = (rect.bottom + 10) + 'px';
+                    pop.style.left = (rect.left + rect.width / 2) + 'px';
+                    pop.style.transform = 'translateX(-50%)';
+                    document.body.appendChild(pop);
+                    let dismissed = false;
+                    const dismiss = () => {
+                        if (dismissed) return;
+                        dismissed = true;
+                        const el = $id('star-popup');
+                        if (el) el.remove();
+                        document.removeEventListener('click', outside);
+                    };
+                    const outside = (ev) => { if (ev.target !== starTitleEl && !pop.contains(ev.target)) dismiss(); };
+                    const closeBtn = pop.querySelector('#sp-close');
+                    if (closeBtn) closeBtn.addEventListener('click', function(ev) { ev.preventDefault(); ev.stopPropagation(); dismiss(); });
+                    setTimeout(dismiss, 6000);
+                    document.addEventListener('click', outside);
+                });
+            }
+
             // ---- 控制台提示 ----
             console.log('✅ 小富翁股票投资游戏 v9.3 增强版 已加载完成');
             console.log('🔧 v9.3：掠夺模式封股票跑路机制；AI即将破产时撤资保命；补全存档/预测拦截');
