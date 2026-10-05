@@ -164,7 +164,8 @@
                 document.body.classList.remove('modal-open');
             });
 
-            document.getElementById('achievement-modal').addEventListener('click', function(e) {
+            const achievementModalEl = document.getElementById('achievement-modal');
+            if (achievementModalEl) achievementModalEl.addEventListener('click', function(e) {
                 if (e.target === this) {
                     this.classList.remove('active');
                     document.body.classList.remove('modal-open');
@@ -177,8 +178,10 @@
                 $id('add-external-ai-btn').addEventListener('click', addExternalAI);
             }
 
-            document.getElementById('eai-panel-close').addEventListener('click', closeExternalPanel);
-            document.getElementById('eai-panel-close-btn').addEventListener('click', closeExternalPanel);
+            const eaiPanelCloseEl = document.getElementById('eai-panel-close');
+            if (eaiPanelCloseEl) eaiPanelCloseEl.addEventListener('click', closeExternalPanel);
+            const eaiPanelCloseBtnEl = document.getElementById('eai-panel-close-btn');
+            if (eaiPanelCloseBtnEl) eaiPanelCloseBtnEl.addEventListener('click', closeExternalPanel);
 
             document.querySelectorAll('#eai-overlay .eai-tabs button').forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -187,7 +190,8 @@
                 });
             });
 
-            document.getElementById('eai-copy-prompt').addEventListener('click', function() {
+            const eaiCopyPromptEl = document.getElementById('eai-copy-prompt');
+            if (eaiCopyPromptEl) eaiCopyPromptEl.addEventListener('click', function() {
                 let box = document.getElementById('eai-prompt-box');
                 let text = box.textContent;
                 navigator.clipboard.writeText(text).then(() => {
@@ -203,7 +207,8 @@
                 });
             });
 
-            document.getElementById('eai-execute-response').addEventListener('click', function() {
+            const eaiExecuteResponseEl = document.getElementById('eai-execute-response');
+            if (eaiExecuteResponseEl) eaiExecuteResponseEl.addEventListener('click', function() {
                 let text = document.getElementById('eai-response-text').value.trim();
                 if (!text) {
                     showBanner('请粘贴外部AI的回复内容', 'warning', null, '⚠️ 操作失败');
@@ -235,7 +240,8 @@
                 }
             });
 
-            document.getElementById('eai-clear-response').addEventListener('click', function() {
+            const eaiClearResponseEl = document.getElementById('eai-clear-response');
+            if (eaiClearResponseEl) eaiClearResponseEl.addEventListener('click', function() {
                 document.getElementById('eai-response-text').value = '';
             });
 
@@ -279,7 +285,8 @@
             });
 
             // ---- 应用设置按钮 ----
-            document.getElementById('apply-admin-btn').addEventListener('click', function() {
+            const applyAdminBtnEl = document.getElementById('apply-admin-btn');
+            if (applyAdminBtnEl) applyAdminBtnEl.addEventListener('click', function() {
                 ADMIN_CONFIG.volatilityScale = parseFloat(document.getElementById('admin-volatility-scale')
                     .value) || 1.0;
                 ADMIN_CONFIG.lotteryWinScale = parseFloat(document.getElementById('admin-lottery-win-scale')
