@@ -395,6 +395,12 @@
                 if (document.getElementById('game-main')) document.getElementById('game-main').style.display = 'block';
                 hidePageLoading();
                 if (window.chatActivate) chatActivate();
+                // v10.1: 玩家端首个状态到达时显示日志面板，并随状态同步刷新日志内容
+                {
+                    const histPanel = document.getElementById('game-history');
+                    if (histPanel && histPanel.classList.contains('hidden') && typeof showLogPanel === 'function') showLogPanel();
+                    if (typeof rebuildLogs === 'function') rebuildLogs();
+                }
                 renderAll();
                 break;
             case 'market_close_timer':

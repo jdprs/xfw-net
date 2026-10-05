@@ -403,7 +403,7 @@
             // ---- 日志面板显示按钮 ----
             document.getElementById('show-log-btn').addEventListener('click', function() {
                 let panel = document.getElementById('game-history');
-                if (panel.classList.contains('hidden')) return;
+                panel.classList.remove('hidden');
                 panel.classList.remove('collapsed');
                 logPanelVisible = true;
                 this.style.display = 'none';

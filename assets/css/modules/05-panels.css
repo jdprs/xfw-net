@@ -233,7 +233,11 @@
         .banner-message .banner-icon::before {
             content: '';
             position: absolute;
-            inset: -4px;
+            top: 50%;
+            left: 50%;
+            width: 1.5em;
+            height: 1.5em;
+            transform: translate(-50%, -50%) scale(0.85);
             border-radius: 50%;
             border: 1.5px solid rgba(79, 195, 247, 0.55);
             animation: banner-icon-ripple 2s ease-out infinite;
@@ -248,8 +252,8 @@
             50% { transform: scale(1.1); }
         }
         @keyframes banner-icon-ripple {
-            0% { opacity: 0.8; transform: scale(0.85); }
-            75%, 100% { opacity: 0; transform: scale(1.35); }
+            0% { opacity: 0.8; transform: translate(-50%, -50%) scale(0.85); }
+            75%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
         }
         .banner-message .banner-content {
             flex: 1;
