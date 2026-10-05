@@ -10,7 +10,7 @@
    7. 自定义滚动条 / 选区 / 焦点 / reduced-motion 适配
    ============================================================ */
 
-/* 1) 环境氛围——缓慢流动的渐变光晕 */
+/* 1) 环境氛围——缓慢流动的渐变光晕（已调淡，保留深蓝底为主） */
 body::before {
     content: '';
     position: fixed;
@@ -18,16 +18,16 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(640px 420px at 18% 12%, rgba(25, 118, 210, 0.22), transparent 62%),
-        radial-gradient(520px 360px at 86% 82%, rgba(255, 215, 0, 0.10), transparent 62%),
-        radial-gradient(420px 320px at 62% 46%, rgba(0, 188, 212, 0.10), transparent 62%);
-    animation: aura-drift 20s ease-in-out infinite alternate;
+        radial-gradient(720px 500px at 18% 12%, rgba(25, 118, 210, 0.10), transparent 66%),
+        radial-gradient(600px 420px at 86% 82%, rgba(255, 215, 0, 0.045), transparent 66%),
+        radial-gradient(480px 360px at 62% 46%, rgba(0, 188, 212, 0.05), transparent 66%);
+    animation: aura-drift 28s ease-in-out infinite alternate;
     will-change: transform;
 }
 @keyframes aura-drift {
     0%   { transform: translate3d(0, 0, 0) scale(1); }
-    50%  { transform: translate3d(2%, -2%, 0) scale(1.07); }
-    100% { transform: translate3d(-2%, 2%, 0) scale(1.05); }
+    50%  { transform: translate3d(1.5%, -1.5%, 0) scale(1.04); }
+    100% { transform: translate3d(-1.5%, 1.5%, 0) scale(1.03); }
 }
 
 /* 2) 玩家卡片——悬浮抬升 + 光晕描边（决策中/等待态的卡片不抬起） */
