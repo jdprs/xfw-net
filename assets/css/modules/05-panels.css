@@ -705,3 +705,67 @@
             color: var(--text-secondary);
             margin-bottom: 16px;
         }
+
+        /* ===== 历史版本 / commit 弹窗 ===== */
+        #history-version { cursor: pointer; }
+        #history-version:hover { color: var(--accent-gold); }
+        .commit-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            z-index: 1200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            padding: 16px;
+        }
+        .commit-modal {
+            background: var(--bg-card);
+            border: 2px solid var(--accent-gold);
+            border-radius: 16px;
+            padding: 18px 22px;
+            max-width: 560px;
+            width: 100%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: event-pop 0.3s ease-out;
+        }
+        .commit-modal .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .commit-list {
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 4px;
+        }
+        .commit-item {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 8px 12px;
+            border-left: 3px solid var(--accent-gold);
+            font-size: 0.82rem;
+        }
+        .commit-item .ci-sha {
+            color: var(--external-cyan, #4dd0e1);
+            font-family: monospace;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .commit-item .ci-msg {
+            color: var(--text-primary);
+            font-weight: 600;
+            display: block;
+            margin-bottom: 3px;
+            word-break: break-word;
+        }
+        .commit-item .ci-meta {
+            color: var(--text-secondary);
+            font-size: 0.72rem;
+        }

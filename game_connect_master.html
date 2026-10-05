@@ -27,7 +27,7 @@
             loadPeerJS(0);
         })();
     </script>
-    <link rel="stylesheet" href="assets/css/style.css?v=10.0.20" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.0.21" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -87,7 +87,7 @@
         <div class="modal-overlay" id="eai-overlay"><div class="eai-modal-box"><div class="panel-header"><h3 id="eai-panel-title">🌐 外接AI 指令面板</h3><button class="panel-close" id="eai-panel-close">×</button></div><div class="eai-body"><div class="eai-tabs"><button class="active" data-tab="prompt">📋 指令代码</button><button data-tab="response">📥 粘贴回复</button></div><div class="eai-content"><div id="eai-tab-prompt"><div class="eai-prompt-box" id="eai-prompt-box">正在生成指令...</div></div><div id="eai-tab-response" style="display:none;"><textarea id="eai-response-text" placeholder="粘贴外部AI的回复（JSON格式）..." rows="6"></textarea></div></div><div class="eai-toolbar"><button class="btn-sm btn-sm-cyan" id="eai-copy-prompt">📋 复制指令</button><span class="hint">复制到外部AI，将回复粘贴到右侧</span></div><div class="eai-actions"><button class="btn btn-success btn-sm" id="eai-execute-response">⚡ 执行决策</button><button class="btn btn-warning btn-sm" id="eai-clear-response">清空</button><button class="btn btn-primary btn-sm" id="eai-panel-close-btn">关闭面板</button></div></div></div>
         <div class="achievement-modal" id="achievement-modal"><div class="achievement-content"><h2>🏅 成就馆</h2><div class="achievement-stats" id="achievement-stats">已解锁 0 / 9 个成就</div><div class="achievement-grid" id="achievement-grid"></div><button class="achievement-close-btn" id="achievement-close-btn">关闭</button></div></div>
         <div class="version">基氮实验室 版权所有 · v10.0</div>
-        <div class="version">版本号 v10.0</div>
+        <div class="version" id="history-version" title="点击查看历史提交">📜 历史版本</div>
         <div id="mp-lobby-root" style="display:none;"></div>
     </div>
     <div class="results-modal" id="results-modal"><div class="results-content"><h2>🎉 游戏结束</h2><div id="winner-message"></div><div id="ranking-list"></div><button class="btn btn-gold" id="restart-btn" style="margin-top:14px;width:100%;">🔄 重新开始</button></div></div>
@@ -97,6 +97,6 @@
     <div class="code-modal" id="code-modal"><div class="code-modal-content"><h3 id="code-modal-title">📋 存档码</h3><textarea id="code-textarea" rows="4" placeholder="存档码..."></textarea><div class="btn-row"><button class="btn btn-primary btn-sm" id="code-copy-btn">📋 复制</button><button class="btn btn-success btn-sm" id="code-import-confirm-btn" style="display:none;">📥 导入</button><button class="btn btn-warning btn-sm" id="code-close-btn">关闭</button></div></div></div>
     <div class="history-modal" id="history-modal"><div class="history-content"><div class="section-header"><div class="section-title">📜 历史记录</div><button class="btn btn-warning btn-sm" id="history-close-btn">关闭</button></div><div id="history-summary" class="history-summary"></div><div id="history-list" class="history-list"></div></div></div>
     <div class="expand-overlay" id="expand-overlay"><div class="expand-content"><div class="section-header"><div class="section-title">📊 图表总览</div><div style="display:flex; gap:6px; flex-wrap:wrap;"><button class="btn btn-primary btn-sm expand-tab active" data-tab="players">👤 玩家涨跌</button><button class="btn btn-primary btn-sm expand-tab" data-tab="stocks">📈 股票涨跌</button><button class="btn btn-warning btn-sm" id="expand-close-btn">✕ 关闭</button></div></div><div class="expand-grid" id="expand-grid"></div></div></div>
-    <script src="src/main.js?v=10.0.20"></script>
+    <script src="src/main.js?v=10.0.21"></script>
 </body>
 </html>

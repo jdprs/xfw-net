@@ -430,6 +430,7 @@
                     pop.className = 'star-popup';
                     pop.innerHTML = '<a href="https://github.com/jdprs/xfw-net" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;">⭐ 随手点个Star，支持一下<span class="sp-close" id="sp-close">×</span></a>';
                     const rect = this.getBoundingClientRect();
+                    pop.style.position = 'fixed';
                     pop.style.top = (rect.bottom + 10) + 'px';
                     pop.style.left = (rect.left + rect.width / 2) + 'px';
                     pop.style.transform = 'translateX(-50%)';
@@ -447,6 +448,44 @@
                     if (closeBtn) closeBtn.addEventListener('click', function(ev) { ev.preventDefault(); ev.stopPropagation(); dismiss(); });
                     setTimeout(dismiss, 6000);
                     document.addEventListener('click', outside);
+                });
+            }
+
+            // ---- 底部「历史版本」→ 直接抓取 commit 信息（不跳转） ----
+            const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+            const historyVerEl = $id('history-version');
+            if (historyVerEl) {
+                historyVerEl.addEventListener('click', function() {
+                    let overlay = $id('commit-modal-overlay');
+                    if (overlay) overlay.remove();
+                    overlay = document.createElement('div');
+                    overlay.id = 'commit-modal-overlay';
+                    overlay.className = 'commit-modal-overlay';
+                    overlay.innerHTML = '<div class="commit-modal">' +
+                        '<div class="section-header"><div class="section-title">📜 历史版本（最近提交）</div>' +
+                        '<button class="btn btn-warning btn-sm" id="commit-close">关闭</button></div>' +
+                        '<div class="commit-list" id="commit-list">加载中…</div></div>';
+                    document.body.appendChild(overlay);
+                    const list = $id('commit-list');
+                    const closeBtn = $id('commit-close');
+                    if (closeBtn) closeBtn.addEventListener('click', () => overlay.remove());
+                    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+                    fetch('https://api.github.com/repos/jdprs/xfw-net/commits?per_page=20')
+                        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                        .then(data => {
+                            if (!Array.isArray(data) || data.length === 0) { list.textContent = '暂无提交记录'; return; }
+                            list.innerHTML = data.map(c => {
+                                const msg = ((c.commit && c.commit.message) || '').split('\n')[0] || '';
+                                const dt = c.commit && c.commit.author && c.commit.author.date;
+                                const date = dt ? new Date(dt).toLocaleString('zh-CN', { hour12: false }) : '';
+                                const sha = c.sha ? c.sha.slice(0, 7) : '';
+                                const author = c.commit && c.commit.author ? c.commit.author.name : '';
+                                return '<div class="commit-item"><span class="ci-sha">' + esc(sha) + '</span>' +
+                                    '<span class="ci-msg">' + esc(msg) + '</span>' +
+                                    '<span class="ci-meta">' + esc(author) + ' · ' + esc(date) + '</span></div>';
+                            }).join('');
+                        })
+                        .catch(err => { list.textContent = '获取失败：' + err.message; });
                 });
             }
 
