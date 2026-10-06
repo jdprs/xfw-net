@@ -71,24 +71,27 @@
         <section class="home-mode-menu" id="home-mode-menu">
             <h2>选择模式</h2>
             <div class="home-mode-options">
-                <button class="home-mode-option mode-single" onclick="window.homeSelectMode('single')">
-                    <span class="home-mode-shine"></span>
-                    <span class="home-mode-icon">🎮</span>
-                    <span class="home-mode-label">单机开始</span>
-                    <span class="home-mode-description">设置本局玩家与 AI，离线开始游戏</span>
-                </button>
-                <button class="home-mode-option mode-online" onclick="window.homeSelectMode('online')">
-                    <span class="home-mode-shine"></span>
-                    <span class="home-mode-icon">🌐</span>
-                    <span class="home-mode-label">联机开始</span>
-                    <span class="home-mode-description">创建房间或加入好友房间</span>
-                </button>
-                <button class="home-mode-option mode-settings" onclick="window.homeSelectMode('settings')">
-                    <span class="home-mode-shine"></span>
-                    <span class="home-mode-icon">⚙️</span>
-                    <span class="home-mode-label">设置</span>
-                    <span class="home-mode-description">高级设置，仅对单机生效</span>
-                </button>
+                <div class="home-btn-wrap">
+                    <button class="home-mode-btn mode-single" onclick="window.homeSelectMode('single')">
+                        <span class="home-mode-shine"></span>
+                        <span class="home-mode-icon">🎮</span><span class="home-mode-label">单机开始</span>
+                    </button>
+                    <span class="home-mode-pop">设置本局玩家与 AI，离线开始游戏</span>
+                </div>
+                <div class="home-btn-wrap">
+                    <button class="home-mode-btn mode-online" onclick="window.homeSelectMode('online')">
+                        <span class="home-mode-shine"></span>
+                        <span class="home-mode-icon">🌐</span><span class="home-mode-label">联机开始</span>
+                    </button>
+                    <span class="home-mode-pop">创建房间或加入好友房间</span>
+                </div>
+                <div class="home-btn-wrap">
+                    <button class="home-mode-btn mode-settings" onclick="window.homeSelectMode('settings')">
+                        <span class="home-mode-shine"></span>
+                        <span class="home-mode-icon">⚙️</span><span class="home-mode-label">设置</span>
+                    </button>
+                    <span class="home-mode-pop">高级设置，仅对单机生效</span>
+                </div>
             </div>
         </section>
 
