@@ -120,7 +120,21 @@ body::before {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
-/* 7) 自定义滚动条 */
+/* 7) 板块入场——进入页面时逐区淡入上移（克制、仅一次） */
+.enter-rise {
+    opacity: 0;
+    transform: translateY(16px);
+    will-change: opacity, transform;
+}
+.enter-rise.in {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 0.55s ease,
+        transform 0.55s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* 8) 自定义滚动条 */
 .history-log::-webkit-scrollbar,
 .commit-list::-webkit-scrollbar,
 .expand-grid::-webkit-scrollbar,

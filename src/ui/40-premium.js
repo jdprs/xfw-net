@@ -72,6 +72,71 @@
         scan();
         new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
+
+    /* ---- 板块入场：进入页面时逐区淡入上移（仅一次，克制） ---- */
+    function initEntrance() {
+        if (window.__entranceDone) return;
+        window.__entranceDone = true;
+        var selectors = [
+            'header',
+            '#banner-container',
+            '.game-info',
+            '.round-info',
+            '.leaderboard',
+            '.players-container',
+            '.chart-card',
+            '.net-status-bar',
+            '#game-history',
+            '.controls-bar',
+            '.actions-bar',
+            '.setup-panel'
+        ];
+        var els = [];
+        for (var i = 0; i < selectors.length; i++) {
+            var el = document.querySelector(selectors[i]);
+            if (el) els.push(el);
+        }
+        if (els.length === 0) return;
+        var stagger = 0.06;
+        for (var k = 0; k < els.length; k++) els[k].classList.add('enter-rise');
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                for (var m = 0; m < els.length; m++) {
+                    els[m].style.transitionDelay = (m * stagger).toFixed(2) + 's';
+                    els[m].classList.add('in');
+                }
+                setTimeout(function () {
+                    for (var n = 0; n < els.length; n++) els[n].style.transitionDelay = '';
+                }, (els.length * stagger + 0.7) * 1000);
+            });
+        });
+    }
+
+    /* 游戏页有健康提示时，等它关闭后再做板块入场，避免被遮住看不到 */
+    function readyEntrance() {
+        var hm = document.getElementById('health-modal');
+        var gameVisible = !!(document.getElementById('game-main') || document.querySelector('.game-info'));
+        var waiting = false;
+        if (hm && !hm.classList.contains('hidden') && gameVisible) {
+            waiting = true;
+            var mo = new MutationObserver(function () {
+                if (hm.classList.contains('hidden')) {
+                    mo.disconnect();
+                    initEntrance();
+                }
+            });
+            mo.observe(hm, { attributes: true, attributeFilter: ['class'] });
+        }
+        // 兜底：健康提示迟迟不关或逻辑异常时，也保证入场最终执行
+        if (waiting) setTimeout(initEntrance, 5000);
+        else initEntrance();
+    }
+
+    function initAll() {
+        scan();
+        new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+        readyEntrance();
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAll);
+    else initAll();
 })();
