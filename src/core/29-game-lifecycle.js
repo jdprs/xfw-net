@@ -149,7 +149,7 @@
                     ADMIN_CONFIG.initSharePrice = INIT_SHARE_PRICE;
                     ADMIN_CONFIG.bankruptcyThreshold = BANKRUPTCY_THRESHOLD;
                     ADMIN_CONFIG.bankruptcyFund = BANKRUPTCY_FUND;
-                    ADMIN_CONFIG.animations = (localStorage.getItem('xfw_animations') || '1') !== '0';
+                    ADMIN_CONFIG.animations = (localStorage.getItem('xfw_animations') || '0') !== '0'; // 默认关闭
                     stocks.A.name = 'A股';
                     stocks.B.name = 'B股';
                     stocks.C.name = 'C股';

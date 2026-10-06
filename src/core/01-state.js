@@ -77,7 +77,7 @@
             initSharePrice: 100,
             bankruptcyThreshold: 100, // v9.1
             bankruptcyFund: 1000, // v9.1
-            animations: true // v10.x 高级动画开关（默认开启）
+            animations: false // v10.x 高级动画开关（Beta，默认关闭）
         };
 
         // ---- 成就（v9.1 移除 bankrupt 成就） ----

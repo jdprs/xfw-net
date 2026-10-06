@@ -1,44 +1,32 @@
 /* ============================================================
-   10. 高级动效（增强层）
-   仅做视觉增强，全部为叠加样式，不改变布局与游戏逻辑：
-   1. 环境氛围：缓慢流动的渐变光晕（置于内容之下）
-   2. 玩家卡片：悬浮抬升 + 光晕描边
-   3. 按钮：悬停流光扫过（shine sweep）
-   4. 横幅：玻璃质感 + 弹性入场
+   10. 高级动效（增强层，Beta）
+   仅做视觉增强，全部为叠加样式，不改变布局与游戏逻辑。
+   「新动画」与「游戏原有动画」分开：
+   - 本文件所有动效规则都挂在 body:not(.no-anim) 下 ——
+     高级设置「动画效果」关闭时（body 加 no-anim），只禁用本文件
+     的新动画；游戏原有的 hover / ::before 等旧动画完全不受影响。
+   - 静态样式（自定义滚动条 / 选区 / 焦点 / 复选框外观）不随开关关闭。
+   1. 玩家卡片：悬浮抬升 + 光晕描边
+   2. 按钮：悬停流光扫过（shine sweep）
+   3. 横幅：弹性入场（保留各类型配色）
+   4. 展开日志按钮：轻柔浮动
    5. 模态内容：统一的 premium 弹出
-   6. 数值滚动：由 40-premium.js 驱动 count-up
-   7. 自定义滚动条 / 选区 / 焦点 / reduced-motion 适配
+   6. 排行榜条目：悬停微抬
+   7. 板块入场：进入页面逐区淡入上移（由 40-premium.js 触发）
+   8. 数值滚动：由 40-premium.js 驱动 count-up
    ============================================================ */
 
-/* 1) 环境氛围——缓慢流动的渐变光晕（已调淡，保留深蓝底为主） */
-body::before {
-    content: '';
-    position: fixed;
-    inset: -20%;
-    z-index: -1;
-    pointer-events: none;
-    background:
-        radial-gradient(720px 500px at 18% 12%, rgba(25, 118, 210, 0.10), transparent 66%),
-        radial-gradient(600px 420px at 86% 82%, rgba(255, 215, 0, 0.045), transparent 66%),
-        radial-gradient(480px 360px at 62% 46%, rgba(0, 188, 212, 0.05), transparent 66%);
-    animation: aura-drift 28s ease-in-out infinite alternate;
-    will-change: transform;
-}
-@keyframes aura-drift {
-    0%   { transform: translate3d(0, 0, 0) scale(1); }
-    50%  { transform: translate3d(1.5%, -1.5%, 0) scale(1.04); }
-    100% { transform: translate3d(-1.5%, 1.5%, 0) scale(1.03); }
-}
+/* ============ 新动画（受「动画效果」开关控制） ============ */
 
-/* 2) 玩家卡片——悬浮抬升 + 光晕描边（决策中/等待态的卡片不抬起） */
-.player-card:not(.decision-idle):not(.decision-waiting) {
+/* 玩家卡片——悬浮抬升 + 光晕描边（决策中/等待态卡片不抬起） */
+body:not(.no-anim) .player-card:not(.decision-idle):not(.decision-waiting) {
     transition:
         transform 0.35s cubic-bezier(.2, .75, .25, 1),
         box-shadow 0.35s ease,
         border-color 0.3s ease,
         background 0.3s ease;
 }
-.player-card:not(.decision-idle):not(.decision-waiting):hover {
+body:not(.no-anim) .player-card:not(.decision-idle):not(.decision-waiting):hover {
     transform: translateY(-6px);
     box-shadow:
         0 18px 42px rgba(0, 0, 0, 0.45),
@@ -46,19 +34,19 @@ body::before {
         0 0 28px rgba(25, 118, 210, 0.28);
 }
 
-/* 信息卡 / 排行榜 / 轮次信息——轻量悬浮光晕 */
-.info-item:hover,
-.leaderboard:hover,
-.round-info:hover {
+/* 信息卡 / 排行榜 / 轮次信息——轻量悬浮光晕（不覆盖原版 hover） */
+body:not(.no-anim) .info-item:hover,
+body:not(.no-anim) .leaderboard:hover,
+body:not(.no-anim) .round-info:hover {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), var(--shadow-glow);
 }
 
-/* 3) 按钮——悬停流光扫过 */
-.btn:not(:disabled) {
+/* 按钮——悬停流光扫过 */
+body:not(.no-anim) .btn:not(:disabled) {
     position: relative;
     overflow: hidden;
 }
-.btn:not(:disabled)::after {
+body:not(.no-anim) .btn:not(:disabled)::after {
     content: '';
     position: absolute;
     top: 0;
@@ -70,12 +58,12 @@ body::before {
     transition: left 0.65s cubic-bezier(.25, .8, .25, 1);
     pointer-events: none;
 }
-.btn:not(:disabled):hover::after {
+body:not(.no-anim) .btn:not(:disabled):hover::after {
     left: 150%;
 }
 
-/* 4) 横幅——玻璃质感 + 弹性入场（保留各类型配色背景） */
-.banner-message {
+/* 横幅——弹性入场（保留各类型配色背景） */
+body:not(.no-anim) .banner-message {
     animation: banner-in-premium 0.55s cubic-bezier(.2, .85, .3, 1);
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
@@ -85,7 +73,7 @@ body::before {
 }
 
 /* 展开日志按钮——轻柔浮动 */
-#show-log-btn {
+body:not(.no-anim) #show-log-btn {
     animation: log-btn-float 2.8s ease-in-out infinite;
 }
 @keyframes log-btn-float {
@@ -93,17 +81,17 @@ body::before {
     50%      { transform: translateY(-4px); }
 }
 
-/* 5) 模态内容——统一 premium 弹出 */
-.modal-box,
-.help-content,
-.results-content,
-.event-content,
-.code-modal-content,
-.achievement-content,
-.expand-content,
-.eai-modal-box,
-.commit-modal,
-.history-content {
+/* 模态内容——统一 premium 弹出 */
+body:not(.no-anim) .modal-box,
+body:not(.no-anim) .help-content,
+body:not(.no-anim) .results-content,
+body:not(.no-anim) .event-content,
+body:not(.no-anim) .code-modal-content,
+body:not(.no-anim) .achievement-content,
+body:not(.no-anim) .expand-content,
+body:not(.no-anim) .eai-modal-box,
+body:not(.no-anim) .commit-modal,
+body:not(.no-anim) .history-content {
     animation: premium-pop 0.38s cubic-bezier(.2, .85, .3, 1.12);
 }
 @keyframes premium-pop {
@@ -111,22 +99,22 @@ body::before {
     100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* 6) 排行榜条目——悬停微抬 */
-.leaderboard-item {
+/* 排行榜条目——悬停微抬 */
+body:not(.no-anim) .leaderboard-item {
     transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
 }
-.leaderboard-item:hover {
+body:not(.no-anim) .leaderboard-item:hover {
     transform: translateX(4px);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 
-/* 7) 板块入场——进入页面时逐区淡入上移（克制、仅一次） */
-.enter-rise {
+/* 板块入场——进入页面时逐区淡入上移（克制、仅一次） */
+body:not(.no-anim) .enter-rise {
     opacity: 0;
     transform: translateY(16px);
     will-change: opacity, transform;
 }
-.enter-rise.in {
+body:not(.no-anim) .enter-rise.in {
     opacity: 1;
     transform: translateY(0);
     transition:
@@ -134,7 +122,9 @@ body::before {
         transform 0.55s cubic-bezier(.22, .61, .36, 1);
 }
 
-/* 8) 自定义滚动条 */
+/* ============ 静态样式（不随「动画效果」开关关闭） ============ */
+
+/* 自定义滚动条 */
 .history-log::-webkit-scrollbar,
 .commit-list::-webkit-scrollbar,
 .expand-grid::-webkit-scrollbar,
@@ -171,7 +161,20 @@ body::before {
     outline-offset: 2px;
 }
 
-/* 8) reduced-motion 适配 */
+/* 高级设置「动画效果」复选框：恢复原生勾选框（含✓/叉） */
+.admin-row input[type="checkbox"] {
+    -webkit-appearance: auto;
+    appearance: auto;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    accent-color: var(--accent-gold);
+    cursor: pointer;
+}
+
+/* reduced-motion 适配 */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -181,27 +184,3 @@ body::before {
         transition-duration: 0.01ms !important;
     }
 }
-
-/* 9) 动画关闭（高级设置「动画开关」关闭时，body 加 no-anim） */
-body.no-anim::before { display: none !important; } /* 环境光晕 */
-body.no-anim .player-card:not(.decision-idle):not(.decision-waiting):hover { transform: none !important; box-shadow: none !important; }
-body.no-anim .info-item:hover,
-body.no-anim .leaderboard:hover,
-body.no-anim .round-info:hover { box-shadow: none !important; }
-body.no-anim .btn:not(:disabled) { overflow: visible; }
-body.no-anim .btn:not(:disabled)::after { display: none !important; } /* 按钮流光 */
-body.no-anim .banner-message { animation: none !important; box-shadow: none !important; }
-body.no-anim #show-log-btn { animation: none !important; }
-body.no-anim .modal-box,
-body.no-anim .help-content,
-body.no-anim .results-content,
-body.no-anim .event-content,
-body.no-anim .code-modal-content,
-body.no-anim .achievement-content,
-body.no-anim .expand-content,
-body.no-anim .eai-modal-box,
-body.no-anim .commit-modal,
-body.no-anim .history-content { animation: none !important; }
-body.no-anim .leaderboard-item:hover { transform: none !important; box-shadow: none !important; }
-body.no-anim .enter-rise { opacity: 1 !important; transform: none !important; transition: none !important; }
-

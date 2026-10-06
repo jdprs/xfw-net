@@ -13,7 +13,7 @@
     var state = new WeakMap(); // el -> { value, raf, animating }
 
     // ---- 动画开关（localStorage 持久化，默认开启） ----
-    var animEnabled = (localStorage.getItem('xfw_animations') || '1') !== '0';
+    var animEnabled = (localStorage.getItem('xfw_animations') || '0') !== '0'; // 默认关闭
     function applyNoAnim() {
         if (document.body) document.body.classList.toggle('no-anim', !animEnabled);
     }
@@ -95,7 +95,6 @@
             '.players-container',
             '.chart-card',
             '.net-status-bar',
-            '#game-history',
             '.controls-bar',
             '.actions-bar',
             '.setup-panel'
