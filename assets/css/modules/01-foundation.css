@@ -181,3 +181,9 @@
             color: var(--text-secondary);
             opacity: 0.7;
         }
+        /* 英文版文字更长，整体缩小避免难看的换行 */
+        html.lang-en .health-box { padding: 26px 24px; }
+        html.lang-en .health-box h2 { font-size: 1.45rem; margin-bottom: 16px; }
+        html.lang-en .health-box .health-content { font-size: 0.82rem; line-height: 1.6; margin-bottom: 16px; }
+        html.lang-en .health-box .health-footer { font-size: 0.72rem; }
+        html.lang-en .health-box .health-timer { font-size: 0.78rem; }

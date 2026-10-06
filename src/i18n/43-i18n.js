@@ -1174,6 +1174,7 @@
     function onReady() {
         initSettings();
         if (lang === 'en') {
+            document.documentElement.classList.add('lang-en');
             installSetters();
             // 用 42-help.js 的完整英文版帮助，而非词典逐词翻译
             if (window.refreshHelp) window.refreshHelp('en');
