@@ -78,12 +78,21 @@
                 }
             }, { passive: false });
             el.addEventListener('touchend', () => {
-                el.classList.remove('swiping');
                 const transform = el.style.transform;
                 const match = transform.match(/translateX\(([-\d.]+)px\)/);
-                if (match && parseFloat(match[1]) < -80) {
-                    removeBanner(el);
+                const offset = match ? parseFloat(match[1]) : 0;
+                if (offset < -80) {
+                    el.style.transition = 'none';
+                    el.style.transform = `translateX(${offset}px)`;
+                    void el.offsetWidth;
+                    requestAnimationFrame(() => {
+                        el.style.transition = '';
+                        el.style.transform = 'translateX(-110%)';
+                        el.style.opacity = '0';
+                    });
+                    setTimeout(() => { if (el.parentNode) el.remove(); }, 320);
                 } else {
+                    el.classList.remove('swiping');
                     el.style.transform = '';
                     el.style.opacity = '';
                 }
