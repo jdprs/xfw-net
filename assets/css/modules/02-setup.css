@@ -1,51 +1,106 @@
 /* ===== 首页模式选择 ===== */
         .home-mode-menu {
-            max-width: 820px;
+            max-width: 860px;
             margin: 30px auto;
-            padding: 24px;
+            padding: 28px 24px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius);
             box-shadow: var(--shadow-glow);
         }
         .home-mode-menu h2 {
-            margin: 0 0 18px;
+            margin: 0 0 22px;
             color: var(--accent-gold);
             text-align: center;
             font-size: 1.4rem;
+            letter-spacing: 1px;
         }
         .home-mode-options {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            gap: 16px;
         }
         .home-mode-option {
+            --mc: var(--accent-gold);
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 8px;
-            min-height: 156px;
-            padding: 18px;
+            gap: 10px;
+            padding: 22px 20px;
             color: var(--text-primary);
             text-align: left;
             background: var(--bg-dark);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-top: 3px solid var(--mc);
+            border-radius: 10px;
             cursor: pointer;
-            transition: var(--transition);
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.2,0.7,0.3,1), box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
         }
-        .home-mode-option:hover {
-            border-color: var(--accent-gold);
+        .home-mode-option.mode-single { --mc: #2ecc71; }
+        .home-mode-option.mode-online { --mc: #3b82f6; }
+        .home-mode-option.mode-settings { --mc: #9aa3b2; }
+        .home-mode-icon {
+            font-size: 1.9rem;
+            filter: drop-shadow(0 0 10px color-mix(in srgb, var(--mc) 55%, transparent));
+            transition: transform 0.3s ease;
+        }
+        .home-mode-label {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            transition: color 0.3s ease;
+        }
+        .home-mode-description {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.55;
+            transition: max-height 0.35s ease, opacity 0.35s ease;
+        }
+        body:not(.no-anim) .home-mode-option:hover,
+        body:not(.no-anim) .home-mode-option:focus-visible {
+            transform: translateY(-6px) scale(1.04);
+            z-index: 2;
             background: var(--bg-hover);
-            transform: translateY(-2px);
+            border-color: var(--mc);
+            box-shadow: 0 14px 34px color-mix(in srgb, var(--mc) 28%, transparent);
+            outline: none;
         }
-        .home-mode-icon { font-size: 1.5rem; }
-        .home-mode-label { font-size: 1.05rem; font-weight: 700; }
-        .home-mode-description { color: var(--text-secondary); font-size: 0.82rem; line-height: 1.5; }
+        body:not(.no-anim) .home-mode-option:hover .home-mode-icon,
+        body:not(.no-anim) .home-mode-option:focus-visible .home-mode-icon { transform: scale(1.12) rotate(-4deg); }
+        .home-mode-option:hover .home-mode-label,
+        .home-mode-option:focus-visible .home-mode-label { color: var(--mc); }
+        .home-mode-option:hover .home-mode-description,
+        .home-mode-option:focus-visible .home-mode-description {
+            max-height: 60px;
+            opacity: 1;
+        }
+        /* 扫光 */
+        .home-mode-shine {
+            position: absolute;
+            top: 0; bottom: 0; left: 0;
+            width: 45%;
+            background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--mc) 22%, transparent), transparent);
+            transform: translateX(-160%) skewX(-18deg);
+            pointer-events: none;
+        }
+        body:not(.no-anim) .home-mode-option:hover .home-mode-shine,
+        body:not(.no-anim) .home-mode-option:focus-visible .home-mode-shine {
+            animation: homeShine 0.7s ease;
+        }
+        @keyframes homeShine {
+            from { transform: translateX(-160%) skewX(-18deg); }
+            to { transform: translateX(340%) skewX(-18deg); }
+        }
         @media (max-width: 640px) {
-            .home-mode-menu { margin: 16px auto; padding: 18px 14px; }
-            .home-mode-options { grid-template-columns: 1fr; }
-            .home-mode-option { min-height: 112px; }
+            .home-mode-menu { margin: 16px auto; padding: 20px 14px; }
+            .home-mode-options { grid-template-columns: 1fr; gap: 12px; }
+            .home-mode-option { padding: 18px; }
+            .home-mode-description { max-height: 60px; opacity: 1; }
         }
 
 /* ===== 设置面板 ===== */

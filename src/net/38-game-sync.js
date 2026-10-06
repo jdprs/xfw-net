@@ -730,6 +730,9 @@
     function startMasterGame() {
         if (Sync.gameStarted) return;
         Sync.gameStarted = true;
+        // 进入对局后隐藏「返回大厅」按钮（页面下方已有重新开始按钮）
+        var netHomeBtn = document.getElementById('net-home-btn');
+        if (netHomeBtn) netHomeBtn.style.display = 'none';
         Sync.roundConfirm = null;
         Sync.myConfirmSent = false;
         const cfg = JSON.parse(localStorage.getItem('xfw_room_config') || '{}');

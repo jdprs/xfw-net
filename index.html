@@ -30,7 +30,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <link rel="stylesheet" href="assets/css/style.css?v=10.0.30" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10.1" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -71,20 +71,23 @@
         <section class="home-mode-menu" id="home-mode-menu">
             <h2>选择模式</h2>
             <div class="home-mode-options">
-                <button class="home-mode-option" onclick="window.homeSelectMode('single')">
+                <button class="home-mode-option mode-single" onclick="window.homeSelectMode('single')">
+                    <span class="home-mode-shine"></span>
                     <span class="home-mode-icon">🎮</span>
-                    <span class="home-mode-label">单机模式</span>
-                    <span class="home-mode-description">设置本局玩家与 AI，然后开始游戏</span>
+                    <span class="home-mode-label">单机开始</span>
+                    <span class="home-mode-description">设置本局玩家与 AI，离线开始游戏</span>
                 </button>
-                <button class="home-mode-option" onclick="window.homeSelectMode('online')">
+                <button class="home-mode-option mode-online" onclick="window.homeSelectMode('online')">
+                    <span class="home-mode-shine"></span>
                     <span class="home-mode-icon">🌐</span>
-                    <span class="home-mode-label">联机模式</span>
-                    <span class="home-mode-description">创建房间或加入已有房间</span>
+                    <span class="home-mode-label">联机开始</span>
+                    <span class="home-mode-description">创建房间或加入好友房间</span>
                 </button>
-                <button class="home-mode-option" onclick="window.homeSelectMode('settings')">
+                <button class="home-mode-option mode-settings" onclick="window.homeSelectMode('settings')">
+                    <span class="home-mode-shine"></span>
                     <span class="home-mode-icon">⚙️</span>
                     <span class="home-mode-label">设置</span>
-                    <span class="home-mode-description">原高级设置，仅适用于单机，不支持联机设置</span>
+                    <span class="home-mode-description">高级设置，仅对单机生效</span>
                 </button>
             </div>
         </section>
@@ -387,8 +390,8 @@
         </div>
     </div>
 
-    <script src="src/main.js?v=10.0.30"></script>
-    <script src="src/net/36-p2p.js?v=10.0.30"></script>
-    <script src="src/net/37-lobby.js?v=10.0.30"></script>
+    <script src="src/main.js?v=10.1"></script>
+    <script src="src/net/36-p2p.js?v=10.1"></script>
+    <script src="src/net/37-lobby.js?v=10.1"></script>
 </body>
 </html>

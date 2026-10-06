@@ -78,7 +78,12 @@
             panel.querySelector('#chat-toggle').textContent = panel.classList.contains('collapsed') ? '▴' : '▾';
             // v10.7: 折叠/展开后重新定位状态栏
             placeStatusBar();
+            // 展开/收起有CSS过渡，逐帧跟随让状态栏平滑移动，结束兜底
+            var frames = 0;
+            var tick = function () { placeStatusBar(); frames++; if (frames < 40) requestAnimationFrame(tick); };
+            requestAnimationFrame(tick);
         };
+        panel.addEventListener('transitionend', function () { placeStatusBar(); });
         panel.querySelector('#chat-send').onclick = send;
         panel.querySelector('#chat-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') send();
