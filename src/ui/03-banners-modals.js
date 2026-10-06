@@ -90,7 +90,7 @@
                         el.style.transform = 'translateX(-110%)';
                         el.style.opacity = '0';
                     });
-                    setTimeout(() => { if (el.parentNode) el.remove(); }, 320);
+                    setTimeout(() => { flipRemove(el); }, 320);
                 } else {
                     el.classList.remove('swiping');
                     el.style.transform = '';
@@ -131,10 +131,33 @@
             }
         }
 
+        // 移除横幅时，让其余横幅平滑上滑补位（FLIP）
+        function flipRemove(el) {
+            if (!el || !el.parentNode) return;
+            var container = el.parentNode;
+            var siblings = Array.prototype.slice.call(container.children).filter(function (x) { return x !== el; });
+            var tops = siblings.map(function (x) { return x.getBoundingClientRect().top; });
+            el.remove();
+            siblings.forEach(function (sib, i) {
+                if (!sib.parentNode) return;
+                var delta = tops[i] - sib.getBoundingClientRect().top;
+                if (Math.abs(delta) < 1) return;
+                sib.style.transition = 'none';
+                sib.style.transform = 'translateY(' + delta + 'px)';
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        sib.style.transition = 'transform 0.3s ease';
+                        sib.style.transform = '';
+                        setTimeout(function () { if (sib.parentNode) sib.style.transition = ''; }, 320);
+                    });
+                });
+            });
+        }
+
         function removeBanner(el) {
             if (!el || !el.parentNode) return;
             el.classList.add('swiped-out');
-            setTimeout(() => { if (el.parentNode) el.remove(); }, 350);
+            setTimeout(() => { flipRemove(el); }, 350);
         }
 
         function clearAllBanners() {
