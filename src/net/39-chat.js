@@ -121,6 +121,14 @@
         };
         Chat.history.push(item);
         if (Chat.history.length > Chat.maxHistory) Chat.history.shift();
+        // v10.9: 收到他人消息时横幅提示（本地发送 / 系统消息不弹）
+        if (!local && !msg.system && typeof window.showBanner === 'function') {
+            try {
+                const name = msg.playerName || msg.name || 'Player';
+                const preview = String(msg.text || '').slice(0, 50);
+                window.showBanner(name + '：' + preview, 'info', 2500, '💬 新消息');
+            } catch (e) { /* ignore */ }
+        }
         if (Chat.body) renderMsg(item);
     }
     Chat.append = append;

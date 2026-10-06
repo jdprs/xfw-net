@@ -4,7 +4,7 @@
  */
 (() => {
     // ===== 全局版本号（以后改版本号只需要改这里） =====
-    const GAME_VERSION = '10.0.25';
+    const GAME_VERSION = '10.0.26';
     window.GAME_VERSION = GAME_VERSION;
 
     // 自动同步页面上的版本号显示
@@ -69,6 +69,8 @@
         'ui/34-round-history.js',
         'ui/35-expand-charts.js',
         'ui/40-premium.js',
+        'ui/42-help.js',
+        'i18n/43-i18n.js',
     ];
 
     function loadModule(index) {
