@@ -1,13 +1,22 @@
 /* ============================================================
-   40. 高级动效：数值滚动（count-up）
-   仅对"纯金额"文本做滚动动画（如 ¥200,000、¥1,234），
-   遇到"1 / 60"、"A股"等非纯金额格式时直接显示、不做动画。
+   40. 高级动效
+   - 板块入场（淡入上移 + 逐区交错）
+   - 数值滚动（count-up）：仅对纯金额文本做滚动动画，
+     "1 / 60"、"A股"等非纯金额格式直接显示。
+   - 动画开关：高级设置页可关闭，关闭时给 body 加 no-anim，
+     并跳过入场/数字滚动（CSS 侧由 body.no-anim 禁用效果）。
    纯叠加增强，不影响任何游戏逻辑。
    ============================================================ */
 (function () {
     'use strict';
 
     var state = new WeakMap(); // el -> { value, raf, animating }
+
+    // ---- 动画开关（localStorage 持久化，默认开启） ----
+    var animEnabled = (localStorage.getItem('xfw_animations') || '1') !== '0';
+    function applyNoAnim() {
+        if (document.body) document.body.classList.toggle('no-anim', !animEnabled);
+    }
 
     function isAmountText(t) {
         return /^[¥￥]?\s?[\d][\d,]*$/.test(String(t).trim());
@@ -133,9 +142,26 @@
     }
 
     function initAll() {
-        scan();
-        new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
-        readyEntrance();
+        applyNoAnim();
+        if (animEnabled) {
+            scan();
+            new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+            readyEntrance();
+        }
+        // 高级设置页的「动画开关」：变更即持久化并即时生效
+        var toggle = document.getElementById('admin-animations');
+        if (toggle) {
+            toggle.checked = animEnabled;
+            toggle.addEventListener('change', function () {
+                animEnabled = toggle.checked;
+                localStorage.setItem('xfw_animations', animEnabled ? '1' : '0');
+                applyNoAnim();
+                if (animEnabled && !window.__entranceDone) {
+                    scan();
+                    readyEntrance();
+                }
+            });
+        }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAll);
     else initAll();

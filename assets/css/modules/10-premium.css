@@ -181,3 +181,27 @@ body::before {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* 9) 动画关闭（高级设置「动画开关」关闭时，body 加 no-anim） */
+body.no-anim::before { display: none !important; } /* 环境光晕 */
+body.no-anim .player-card:not(.decision-idle):not(.decision-waiting):hover { transform: none !important; box-shadow: none !important; }
+body.no-anim .info-item:hover,
+body.no-anim .leaderboard:hover,
+body.no-anim .round-info:hover { box-shadow: none !important; }
+body.no-anim .btn:not(:disabled) { overflow: visible; }
+body.no-anim .btn:not(:disabled)::after { display: none !important; } /* 按钮流光 */
+body.no-anim .banner-message { animation: none !important; box-shadow: none !important; }
+body.no-anim #show-log-btn { animation: none !important; }
+body.no-anim .modal-box,
+body.no-anim .help-content,
+body.no-anim .results-content,
+body.no-anim .event-content,
+body.no-anim .code-modal-content,
+body.no-anim .achievement-content,
+body.no-anim .expand-content,
+body.no-anim .eai-modal-box,
+body.no-anim .commit-modal,
+body.no-anim .history-content { animation: none !important; }
+body.no-anim .leaderboard-item:hover { transform: none !important; box-shadow: none !important; }
+body.no-anim .enter-rise { opacity: 1 !important; transform: none !important; transition: none !important; }
+

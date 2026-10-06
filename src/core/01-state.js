@@ -76,7 +76,8 @@
             darkHorseProb: 0.35,
             initSharePrice: 100,
             bankruptcyThreshold: 100, // v9.1
-            bankruptcyFund: 1000 // v9.1
+            bankruptcyFund: 1000, // v9.1
+            animations: true // v10.x 高级动画开关（默认开启）
         };
 
         // ---- 成就（v9.1 移除 bankrupt 成就） ----

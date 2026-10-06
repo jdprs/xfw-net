@@ -1,4 +1,4 @@
-//  30. 高级设置入口（双击标题）
+//  30. 高级设置入口（禁用双击标题，改由大厅「高级设置」模式进入）
         // ================================================================
 
         window.openAdminSettings = function() {
@@ -14,7 +14,6 @@
             if (typeof window.enableAdminSettings === 'function') window.enableAdminSettings();
         };
 
-        const mainTitle = document.getElementById('main-title');
-        if (mainTitle) mainTitle.addEventListener('dblclick', window.openAdminSettings);
+        // 双击标题进高级设置已禁用（v10.0.23），改由大厅「高级设置」模式进入
 
         // ================================================================
