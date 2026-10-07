@@ -52,8 +52,8 @@
             pointer-events: none;
             z-index: 1;
         }
-        body:not(.no-anim) .home-mode-btn:hover .home-mode-shine,
-        body:not(.no-anim) .home-mode-btn:focus-visible .home-mode-shine {
+        body:not(.no-anim) .home-btn-wrap:hover .home-mode-shine,
+        body:not(.no-anim) .home-btn-wrap:focus-within .home-mode-shine {
             animation: homeShine 0.7s ease;
         }
         @keyframes homeShine {
