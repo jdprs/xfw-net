@@ -1,4 +1,4 @@
-/* ===== 首页模式选择 ===== */
+/* ===== 首页模式选择（复用通用 .btn 样式） ===== */
         .home-mode-menu {
             max-width: 860px;
             margin: 30px auto;
@@ -26,37 +26,23 @@
             justify-content: center;
         }
         .home-mode-btn {
-            --mc: var(--accent-gold);
             position: relative;
-            overflow: hidden;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
             width: 100%;
-            padding: 13px 22px;
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: #fff;
-            background: var(--mc);
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 6px 18px color-mix(in srgb, var(--mc) 35%, transparent);
-            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+            overflow: hidden;
+            font-size: 1.02rem;
+            padding: 12px 18px;
         }
-        .home-mode-btn.mode-single { --mc: #2ecc71; }
-        .home-mode-btn.mode-online { --mc: #3b82f6; }
-        .home-mode-btn.mode-settings { --mc: #7b8494; }
-        .home-mode-icon { font-size: 1.2rem; }
-        body:not(.no-anim) .home-mode-btn:hover,
-        body:not(.no-anim) .home-mode-btn:focus-visible {
-            transform: translateY(-3px);
-            filter: brightness(1.08);
-            box-shadow: 0 10px 26px color-mix(in srgb, var(--mc) 45%, transparent);
-            outline: none;
+        /* 顺次浮出入场 */
+        body:not(.no-anim) .home-rise {
+            opacity: 0;
+            animation: homeRise 0.5s cubic-bezier(0.2,0.7,0.3,1) forwards;
+            animation-delay: calc(var(--d) * 0.09s + 0.08s);
         }
-        /* 扫光 */
+        @keyframes homeRise {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: none; }
+        }
+        /* 扫光（与通用 .btn::before 圆形波纹并存） */
         .home-mode-shine {
             position: absolute;
             top: 0; bottom: 0; left: 0;
@@ -64,6 +50,7 @@
             background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
             transform: translateX(-160%) skewX(-18deg);
             pointer-events: none;
+            z-index: 1;
         }
         body:not(.no-anim) .home-mode-btn:hover .home-mode-shine,
         body:not(.no-anim) .home-mode-btn:focus-visible .home-mode-shine {
@@ -84,7 +71,6 @@
             background: var(--bg-card);
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
-            border-left: 3px solid var(--mc);
             border-radius: 8px;
             padding: 9px 12px;
             font-size: 0.82rem;
@@ -106,7 +92,6 @@
         @media (max-width: 640px) {
             .home-mode-menu { margin: 16px auto; padding: 20px 14px; }
             .home-mode-options { grid-template-columns: 1fr; gap: 14px; }
-            .home-mode-btn { width: 100%; }
         }
 
 /* ===== 设置面板 ===== */
