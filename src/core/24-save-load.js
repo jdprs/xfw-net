@@ -179,6 +179,7 @@
                 document.getElementById('code-modal-title').textContent = '📋 导出存档码';
                 document.getElementById('code-import-confirm-btn').style.display = 'none';
                 document.getElementById('code-copy-btn').style.display = 'inline-block';
+                document.getElementById('code-share-btn').style.display = (window.CapBridge && window.CapBridge.isApp) ? 'inline-block' : 'none';
                 document.getElementById('code-modal').style.display = 'flex';
             } catch (e) {
                 showBanner('导出失败：' + e.message, 'error', null, '📋 存档码');
@@ -189,6 +190,7 @@
             document.getElementById('code-modal-title').textContent = '📥 导入存档码';
             document.getElementById('code-import-confirm-btn').style.display = 'inline-block';
             document.getElementById('code-copy-btn').style.display = 'none';
+                var _csb=document.getElementById('code-share-btn'); if(_csb)_csb.style.display='none';
             document.getElementById('code-textarea').value = '';
             document.getElementById('code-modal').style.display = 'flex';
         }

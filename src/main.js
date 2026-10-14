@@ -33,6 +33,7 @@
 
     const moduleBasePath = 'src/';
     const modulePaths = [
+        'app/44-capacitor-bridge.js',
         'core/01-state.js',
         'utils/02-utils.js',
         'ui/03-banners-modals.js',

@@ -3,7 +3,7 @@
 
         let closeMarketBtn, newGameBtn, startGameBtn, loadSaveBtn, saveGameBtn, restartBtn;
         let helpBtn, helpBtnSetup, helpCloseBtn, helpCopyBtn, toggleLogsBtn, togglePanelBtn;
-        let exportCodeBtn, importCodeBtn, codeCloseBtn, codeCopyBtn, codeImportConfirm;
+        let exportCodeBtn, importCodeBtn, codeCloseBtn, codeCopyBtn, codeShareBtn, codeImportConfirm;
         let achievementCloseBtn, endGameBtn;
 
         window.onload = function() {
@@ -64,6 +64,7 @@
             importCodeBtn = $id('import-code-btn');
             codeCloseBtn = $id('code-close-btn');
             codeCopyBtn = $id('code-copy-btn');
+            codeShareBtn = $id('code-share-btn');
             codeImportConfirm = $id('code-import-confirm-btn');
             achievementCloseBtn = $id('achievement-close-btn');
             endGameBtn = $id('end-game-btn');
@@ -152,6 +153,15 @@
             if (exportCodeBtn) exportCodeBtn.addEventListener('click', exportCode);
             if (importCodeBtn) importCodeBtn.addEventListener('click', importCode);
             if (codeCloseBtn) codeCloseBtn.addEventListener('click', () => document.getElementById('code-modal').style.display = 'none');
+            if (codeShareBtn) codeShareBtn.addEventListener('click', () => {
+                let ta = document.getElementById('code-textarea');
+                if (window.CapBridge && window.CapBridge.isApp) {
+                    window.CapBridge.share('小富翁存档码', ta.value);
+                } else {
+                    ta.select(); document.execCommand('copy');
+                    showBanner('已复制到剪贴板', 'success', null, '📋 复制');
+                }
+            });
             if (codeCopyBtn) codeCopyBtn.addEventListener('click', () => {
                 let ta = document.getElementById('code-textarea');
                 ta.select();

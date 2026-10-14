@@ -331,6 +331,10 @@
             <p style="font-size:0.85rem;color:var(--text-secondary);">房间名：<strong>${esc(Lobby.roomConfig.roomName)}</strong></p>
             <p style="font-size:0.85rem;color:var(--text-secondary);">把下面房间号告诉朋友：</p>
             <div class="mp-code-display" id="mp-code">${Lobby.roomConfig.code}</div>
+            <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
+                <button class="btn btn-primary btn-sm" onclick="window.mpCopyRoomCode()">📋 复制</button>
+                <button class="btn btn-gold btn-sm" onclick="window.mpShareRoomCode()">📤 分享</button>
+            </div>
             <div class="waiting-timer">⏳ 房间将在 <span id="mp-wait-timer">${formatCountdown(Lobby.waitSeconds)}</span> 后关闭</div>
             <div class="waiting-player-list">${list}</div>
             <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin:6px 0;">${Lobby.lobbyPlayers.length}/${Lobby.roomConfig.maxPlayers} 人 · 房主可随时开始游戏</div>
@@ -339,6 +343,21 @@
                 <button class="btn btn-danger" onclick="window.mpHostCloseRoom()">✖ 关闭房间</button>
             </div>`);
     }
+
+    window.mpCopyRoomCode = function () {
+        var code = Lobby.roomConfig && Lobby.roomConfig.code;
+        if (!code) return;
+        if (window.CapBridge) window.CapBridge.copy(code);
+        else { var ta=document.createElement('textarea'); ta.value=code; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+        if (typeof showBanner === 'function') showBanner('房间号已复制：' + code, 'success', null, '📋 房间号');
+    };
+    window.mpShareRoomCode = function () {
+        var code = Lobby.roomConfig && Lobby.roomConfig.code;
+        if (!code) return;
+        var text = '来小富翁股票投资一起玩！房间号：' + code;
+        if (window.CapBridge && window.CapBridge.isApp) window.CapBridge.share('小富翁联机邀请', text);
+        else { window.mpCopyRoomCode(); }
+    };
 
     async function mpHostStartGame() {
         try {
