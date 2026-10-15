@@ -39,6 +39,11 @@
             setValIf('admin-banner-duration', BANNER_DURATION);
             setValIf('admin-ai-think-min', AI_THINK_MIN);
             setValIf('admin-ai-think-max', AI_THINK_MAX);
+            setValIf('admin-ai-difficulty', (typeof ADMIN_CONFIG!=='undefined'&&ADMIN_CONFIG.aiDifficulty)||'random');
+            let resetQ = document.getElementById('admin-reset-qlearning');
+            if (resetQ) resetQ.addEventListener('click', function() {
+                if (typeof QLearner !== 'undefined') { QLearner.reset(); showBanner('AI学习记忆已重置', 'success', null, '🧠 Q-Learning'); }
+            });
             setValIf('admin-chart-type', CHART_TYPE);
             setValIf('admin-darkhorse-multiplier', DARK_HORSE_MULTIPLIER);
             setValIf('admin-darkhorse-prob', DARK_HORSE_PROB);

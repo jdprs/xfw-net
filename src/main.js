@@ -44,6 +44,8 @@
         'core/08-stock-trading.js',
         'ai/09-internal-ai.js',
         'ai/10-external-ai.js',
+        'ai/12-pretrained-qtable.js',
+        'ai/11-qlearning.js',
         'modules/11-prediction.js',
         'modules/12-achievements.js',
         'modules/13-portfolio-rating.js',

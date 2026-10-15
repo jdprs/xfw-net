@@ -226,7 +226,10 @@
             }
 
             let badge = '';
-            if (p.isAI) badge = `<span class="ai-badge">${p.aiStrategy}</span>`;
+            if (p.isAI) {
+                let diffLabel = {easy:'🟢易',medium:'🟡中',hard:'🔴难'}[p.aiDifficulty] || '';
+                badge = `<span class="ai-badge">${p.aiStrategy}${diffLabel?' · '+diffLabel:''}</span>`;
+            }
             else if (p.isExternal) {
                 let cfg = externalAIConfigs.find(c => c.playerId === p.id);
                 let mode = cfg ? (cfg.accessMode === 'api' ? 'API' : '指令') : '未配置';

@@ -236,6 +236,22 @@
             const isOnlineClose = window.GAME_MODE === 'master' || window.GAME_MODE === 'player';
             // 推进到下一轮（或结束）的统一函数
             const advanceToNextRound = function() {
+                // Q-Learning：轮次结束时更新所有难AI的Q值
+                if (typeof QLearner !== 'undefined') {
+                    let md = (typeof analyzeMarket === 'function') ? analyzeMarket() : null;
+                    for (let p of players) {
+                        if (!p.isAI || p.bankrupt) continue;
+                        if (p.aiDifficulty !== 'hard') continue;
+                        if (!p._qLastState || !p._qLastAction) continue;
+                        let nextState = QLearner.getStateKey(p, md);
+                        let reward = 0;
+                        if (p._qLastAssets && p._qLastAssets > 0) {
+                            reward = (p.totalAssets() - p._qLastAssets) / p._qLastAssets;
+                        }
+                        QLearner.update(p._qLastState, p._qLastAction, reward, nextState);
+                        p._qLastAssets = p.totalAssets();
+                    }
+                }
                 round++;
                 if (round > totalRounds) {
                     endGame();
@@ -252,6 +268,8 @@
                     updateEndGameButton();
                     setAllControlsEnabled(false);
                     showBanner(`📊 第 ${round} 轮开始，请玩家点击「决策」`, 'info', null, '🔄 新轮次');
+                    // Q-Learning：记录AI本轮初始资产
+                    if (typeof QLearner !== 'undefined') { for (let p of players) { if (p.isAI && p.aiDifficulty==='hard') p._qLastAssets = p.totalAssets(); } }
                 }
             };
             if (isOnlineClose) {

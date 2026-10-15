@@ -1,4 +1,16 @@
 //  29. 游戏初始化 & 结束
+        function assignAIDifficulty() {
+            let mode = (typeof ADMIN_CONFIG !== 'undefined' && ADMIN_CONFIG.aiDifficulty) || 'random';
+            if (mode === 'easy') return 'easy';
+            if (mode === 'medium') return 'medium';
+            if (mode === 'hard') return 'hard';
+            // random: 易30% 中45% 难25%
+            let r = Math.random();
+            if (r < 0.30) return 'easy';
+            if (r < 0.75) return 'medium';
+            return 'hard';
+        }
+
         // ================================================================
 
         function initGame(loadSave = false) {
@@ -43,6 +55,10 @@
                 }
                 if (totalRounds < 10) totalRounds = 10;
                 if (totalRounds > 200) totalRounds = 200;
+
+                // 读取AI难度（始终生效，不限于adminMode）
+                const diffSel = document.getElementById('admin-ai-difficulty');
+                ADMIN_CONFIG.aiDifficulty = diffSel ? diffSel.value : 'random';
 
                 const bannerDur = parseFloat(document.getElementById('admin-banner-duration').value);
                 if (!isNaN(bannerDur) && bannerDur > 0) BANNER_DURATION = bannerDur;
@@ -94,6 +110,8 @@
                     ADMIN_CONFIG.bankruptcyFund = BANKRUPTCY_FUND;
                     const animBox = document.getElementById('admin-animations');
                     ADMIN_CONFIG.animations = animBox ? animBox.checked : true;
+                    const diffSel = document.getElementById('admin-ai-difficulty');
+                    ADMIN_CONFIG.aiDifficulty = diffSel ? diffSel.value : 'random';
                     if (animBox) localStorage.setItem('xfw_animations', animBox.checked ? '1' : '0');
 
                     document.querySelectorAll('.ach-reward-input').forEach(inp => {
@@ -239,6 +257,7 @@
                         isExternal: false,
                         isHuman: false,
                         aiStrategy: strategy,
+                        aiDifficulty: assignAIDifficulty(),
                         _lastRating: 'D',
                         totalAssets: function() {
                             let stockVal = ['A', 'B', 'C', 'D'].reduce((sum, k) => {

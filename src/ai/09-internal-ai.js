@@ -1,8 +1,18 @@
 //  9. 场内AI 决策
         // ================================================================
 
+        // v10.2: AI 难度配置（易/中/难，游戏开始随机分配）
+        const AI_DIFFICULTY = {
+            easy:   { label:'易', color:'#4ade80', skipChance:0.35, cashMul:1.8,  stopLossMul:2.5,  takeProfitMul:0.5,  investMul:0.4,  randomPick:true,  useDarkHorse:false, useCustom:false, useLottery:false, noise:0.5 },
+            medium: { label:'中', color:'#facc15', skipChance:0.08, cashMul:1.0,  stopLossMul:1.0,  takeProfitMul:1.0,  investMul:1.0,  randomPick:false, useDarkHorse:true,  useCustom:true,  useLottery:true,  noise:0.15 },
+            hard:   { label:'难', color:'#f87171', skipChance:0,    cashMul:0.6,  stopLossMul:0.8,  takeProfitMul:1.2,  investMul:1.3,  randomPick:false, useDarkHorse:true,  useCustom:true,  useLottery:true,  noise:0 }
+        };
+        function getDiffCfg(p){ return AI_DIFFICULTY[p.aiDifficulty] || AI_DIFFICULTY.medium; }
+
         function makeAIDecision(player) {
             if (player.bankrupt || !player.isAI) return;
+            let diff = getDiffCfg(player);
+            if (Math.random() < diff.skipChance) { showBanner(player.name+' 持币观望', 'info', null, '🤖 AI决策'); return; }
             let strategy = player.aiStrategy;
             let total = player.totalAssets();
             if (total < 100) {
@@ -12,14 +22,21 @@
             let marketData = analyzeMarket();
             let stockScores = scoreStocks(marketData);
 
-            if (currentDarkHorse) {
+            // 易：随机评分；中：加噪声；难：无噪声（由Q表决策）
+            if (diff.randomPick) {
+                for (let k of ['A','B','C','D']) stockScores[k] = 0.3 + Math.random()*0.4;
+            } else if (diff.noise > 0) {
+                for (let k of ['A','B','C','D']) stockScores[k] = clamp(stockScores[k] + (Math.random()-0.5)*diff.noise, 0.05, 0.95);
+            }
+
+            if (diff.useDarkHorse && currentDarkHorse) {
                 let dhKey = currentDarkHorse.key;
                 if (dhKey && stockScores[dhKey] !== undefined) {
                     stockScores[dhKey] = Math.min(1, (stockScores[dhKey] || 0.5) + 0.25);
                 }
             }
 
-            if (Math.random() < 0.08 && player.cash >= 200) {
+            if (diff.useLottery && Math.random() < 0.08 && player.cash >= 200) {
                 let available = lotteries.filter(l => l.price <= player.cash * 0.04);
                 if (available.length) {
                     let lot = available[randInt(0, available.length - 1)];
@@ -42,7 +59,7 @@
                 totalStockVal += holdings[k] * stocks[k].price;
             });
 
-            // v9.3: 即将破产时撤资保命（优先级最高）
+            // 即将破产时撤资保命（优先级最高）
             let dangerLine = BANKRUPTCY_THRESHOLD * 8;
             if (total < dangerLine && totalStockVal > 0) {
                 addLog(`🤖 ${player.name} 资产告急（${fmt(total)}），启动撤资保命`, 'warning');
@@ -60,8 +77,11 @@
             }
 
             let config = getStrategyConfig(strategy, marketData);
+            config.cashRatio = clamp(config.cashRatio * diff.cashMul, 0.05, 0.6);
+            config.stopLoss *= diff.stopLossMul;
+            config.takeProfit *= diff.takeProfitMul;
 
-            // 止损止盈
+            // 止损止盈（所有难度共用）
             for (let sk of ['C', 'B', 'A', 'D']) {
                 let holding = holdings[sk];
                 if (holding < 1) continue;
@@ -73,40 +93,36 @@
                     estCost = recentMults.reduce((a, b) => a + b, 0) / recentMults.length;
                 }
                 let drawdown = (mult - estCost) / estCost;
-                let stopLoss = config.stopLoss;
-                if (drawdown < -stopLoss && Math.random() < 0.65) {
+                if (drawdown < -config.stopLoss && Math.random() < 0.65) {
                     let sellPct = 0.5 + Math.random() * 0.35;
                     let sellShares = Math.floor(holding * sellPct);
                     if (sellShares > 0) {
                         withdrawStock(player.id, sk, sellShares);
-                        addLog(`🤖 ${player.name} 触发止损 (${sk}股亏损${(drawdown*100).toFixed(1)}%) 卖出 ${sellShares}股`,
-                            'loss');
+                        addLog(`🤖 ${player.name} 触发止损 (${sk}股亏损${(drawdown*100).toFixed(1)}%) 卖出 ${sellShares}股`, 'loss');
                         holdings[sk] -= sellShares;
                         totalStockVal -= sellShares * stocks[sk].price;
                     }
                 }
-                let takeProfit = config.takeProfit;
-                if (drawdown > takeProfit && Math.random() < 0.45) {
+                if (drawdown > config.takeProfit && Math.random() < 0.45) {
                     let sellPct = 0.3 + Math.random() * 0.25;
                     let sellShares = Math.floor(holding * sellPct);
                     if (sellShares > 0) {
                         withdrawStock(player.id, sk, sellShares);
-                        addLog(`🤖 ${player.name} 止盈 (${sk}股盈利${(drawdown*100).toFixed(1)}%) 卖出 ${sellShares}股`,
-                            'profit');
+                        addLog(`🤖 ${player.name} 止盈 (${sk}股盈利${(drawdown*100).toFixed(1)}%) 卖出 ${sellShares}股`, 'profit');
                         holdings[sk] -= sellShares;
                         totalStockVal -= sellShares * stocks[sk].price;
                     }
                 }
             }
 
-            // 再平衡
+            // 再平衡（易跳过）
             let targetWeights = config.weights;
             let targetCashRatio = config.cashRatio;
             let totalWealth = player.totalAssets();
             let targetStockVal = totalWealth * (1 - targetCashRatio);
 
-            let rebalanceThreshold = 0.20;
-            if (totalStockVal > 500) {
+            if (!diff.randomPick && totalStockVal > 500) {
+                let rebalanceThreshold = 0.20;
                 for (let sk of Object.keys(targetWeights)) {
                     if (targetWeights[sk] <= 0) continue;
                     let currentVal = holdings[sk] * stocks[sk].price;
@@ -138,10 +154,7 @@
                     let worstScore = Infinity;
                     for (let sk of ['C', 'B', 'A', 'D']) {
                         let score = stockScores[sk] || 0;
-                        if (holdings[sk] > 0 && score < worstScore) {
-                            worstScore = score;
-                            worst = sk;
-                        }
+                        if (holdings[sk] > 0 && score < worstScore) { worstScore = score; worst = sk; }
                     }
                     let price = stocks[worst].price;
                     let maxShares = Math.floor(holdings[worst]);
@@ -158,6 +171,33 @@
                 investBudget = 0;
             }
 
+            investBudget = Math.round(investBudget * diff.investMul);
+
+            // ===== 难 AI：Q 表直接决策 =====
+            if (player.aiDifficulty === 'hard' && typeof QLearner !== 'undefined') {
+                let qStateKey = QLearner.getStateKey(player, marketData);
+                let qAction = QLearner.chooseAction(qStateKey);
+                player._qLastState = qStateKey;
+                player._qLastAction = qAction;
+                if (qAction === 'hold') {
+                    showBanner(player.name+' Q决策：观望', 'info', null, '🤖 AI决策');
+                    return;
+                }
+                if (qAction && qAction.startsWith('buy_')) {
+                    let candidate = qAction.split('_')[1];
+                    let price = stocks[candidate].price;
+                    let maxShares = Math.floor(player.cash / price);
+                    let shares = Math.min(maxShares, Math.floor(investBudget / price));
+                    if (shares > 0) {
+                        investStock(player.id, candidate, shares);
+                        addLog(`🤖 ${player.name} Q决策买入${candidate}股 ${shares}股`);
+                        showBanner(`${player.name} Q决策买入 ${candidate}股 ${shares}股`, 'info', null, '🤖 AI决策');
+                        return;
+                    }
+                }
+            }
+
+            // ===== 易/中：规则引擎 =====
             if (investBudget < 100 || player.cash < 100) {
                 if (player.cash > 500 && totalStockVal > 0) {
                     let drip = Math.round(player.cash * 0.08);
@@ -180,18 +220,20 @@
             }
 
             // 自建股
-            let customWeight = strategy === '进取型' ? 0.12 : strategy === '平衡型' ? 0.04 : 0.02;
-            if (customStocks.length > 0 && Math.random() < customWeight * 3) {
-                let available = customStocks.filter(cs => cs.creatorId !== player.id && cs.value >= 0);
-                if (available.length) {
-                    let sorted = [...available].sort((a, b) => (b.recentMultiplier || 1) - (a.recentMultiplier || 1));
-                    let target = sorted[0];
-                    let amt = Math.round(investBudget * (0.15 + Math.random() * 0.2));
-                    if (amt >= 100 && amt <= player.cash) {
-                        investCustomStock(player.id, target.id, amt);
-                        addLog(`🤖 ${player.name} 投资自建股「${target.name}」${fmt(amt)}`);
-                        showBanner(`${player.name} 投资自建股「${target.name}」${fmt(amt)}`, 'info', null, '🤖 AI决策');
-                        return;
+            if (diff.useCustom) {
+                let customWeight = strategy === '进取型' ? 0.12 : strategy === '平衡型' ? 0.04 : 0.02;
+                if (customStocks.length > 0 && Math.random() < customWeight * 3) {
+                    let available = customStocks.filter(cs => cs.creatorId !== player.id && cs.value >= 0);
+                    if (available.length) {
+                        let sorted = [...available].sort((a, b) => (b.recentMultiplier || 1) - (a.recentMultiplier || 1));
+                        let target = sorted[0];
+                        let amt = Math.round(investBudget * (0.15 + Math.random() * 0.2));
+                        if (amt >= 100 && amt <= player.cash) {
+                            investCustomStock(player.id, target.id, amt);
+                            addLog(`🤖 ${player.name} 投资自建股「${target.name}」${fmt(amt)}`);
+                            showBanner(`${player.name} 投资自建股「${target.name}」${fmt(amt)}`, 'info', null, '🤖 AI决策');
+                            return;
+                        }
                     }
                 }
             }
@@ -247,8 +289,7 @@
                 }
                 let strength = 0.5 + trend * 2 + momentum * 1.5;
                 strength = clamp(strength, 0, 1);
-                data[k] = { trend, momentum, volatility, strength, currentPrice: s.price || 100, recentMultiplier: s
-                        .recentMultiplier || 1 };
+                data[k] = { trend, momentum, volatility, strength, currentPrice: s.price || 100, recentMultiplier: s.recentMultiplier || 1 };
             }
             let avgStrength = (data.A.strength + data.B.strength + data.C.strength + data.D.strength) / 4;
             data.marketSentiment = avgStrength;
@@ -297,12 +338,10 @@
                     takeProfit = baseTake * 1.4;
                     break;
                 case '趋势跟随':
-                    let best = 'A',
-                        bestVal = -Infinity;
+                    let best = 'A', bestVal = -Infinity;
                     for (let k of ['C', 'B', 'A', 'D']) {
                         let s = stocks[k].recentMultiplier || 1;
-                        if (s > bestVal) { bestVal = s;
-                            best = k; }
+                        if (s > bestVal) { bestVal = s; best = k; }
                     }
                     weights = { A: 0.15, B: 0.15, C: 0.15, D: 0.15 };
                     weights[best] = 0.40;
@@ -311,12 +350,10 @@
                     takeProfit = baseTake * 0.9;
                     break;
                 case '逆向投资':
-                    let worst = 'A',
-                        worstVal = Infinity;
+                    let worst = 'A', worstVal = Infinity;
                     for (let k of ['C', 'B', 'A', 'D']) {
                         let s = stocks[k].recentMultiplier || 1;
-                        if (s < worstVal) { worstVal = s;
-                            worst = k; }
+                        if (s < worstVal) { worstVal = s; worst = k; }
                     }
                     weights = { A: 0.20, B: 0.20, C: 0.20, D: 0.20 };
                     weights[worst] = 0.40;
@@ -342,29 +379,25 @@
         }
 
         function pickBestStock(scores, holdings) {
-            let best = null,
-                bestScore = -Infinity;
+            let best = null, bestScore = -Infinity;
             for (let k of ['C', 'B', 'A', 'D']) {
                 let score = scores[k] || 0;
                 let holdingPenalty = Math.min((holdings[k] || 0) / 30, 0.3);
                 let adjusted = score * (1 - holdingPenalty);
-                if (adjusted > bestScore) { bestScore = adjusted;
-                    best = k; }
+                if (adjusted > bestScore) { bestScore = adjusted; best = k; }
             }
             return best;
         }
 
         function pickSecondBest(scores, holdings) {
-            let best = null,
-                bestScore = -Infinity;
+            let best = null, bestScore = -Infinity;
             let first = pickBestStock(scores, holdings);
             for (let k of ['C', 'B', 'A', 'D']) {
                 if (k === first) continue;
                 let score = scores[k] || 0;
                 let holdingPenalty = Math.min((holdings[k] || 0) / 30, 0.3);
                 let adjusted = score * (1 - holdingPenalty);
-                if (adjusted > bestScore) { bestScore = adjusted;
-                    best = k; }
+                if (adjusted > bestScore) { bestScore = adjusted; best = k; }
             }
             return best;
         }
