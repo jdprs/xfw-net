@@ -21,8 +21,9 @@
         setVal('ai-players', cfg.aiPlayers);
         setVal('total-rounds', cfg.totalRounds);
         if (cfg.admin) {
+          // onAllModulesLoaded 早于 window.onload（事件绑定），用 01-state 暴露的 setter
+          if (window.setAdminMode) window.setAdminMode(true);
           document.getElementById('admin-panel').style.display = 'block';
-          window.adminMode = true;
           setVal('admin-init-money', cfg.admin.initMoney);
           setVal('admin-bank-money', cfg.admin.bankMoney);
           setVal('admin-loot-threshold', cfg.admin.lootThreshold);

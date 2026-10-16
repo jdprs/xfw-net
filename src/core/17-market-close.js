@@ -70,6 +70,8 @@
                 let effect = event.effect(event.stock || 'A');
                 if (effect.all) {
                     Object.keys(eventMult).forEach(k => eventMult[k] = effect.multiplier);
+                    // 全市场事件同样作用于自建股
+                    customStocks.forEach((cs, ci) => { eventMult[`custom_${ci}`] = effect.multiplier; });
                 } else {
                     eventMult[effect.stock] = effect.multiplier;
                 }

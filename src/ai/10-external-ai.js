@@ -416,10 +416,15 @@
                             failedActions.push(act);
                             continue;
                         }
-                        createCustomStock(p.id, name, maxUpPercent, keepPercent);
+                        // 外接AI旧协议(maxUp/keep)映射为新参数：波动系数=maxUp/2.2，初始投资=现金20%
+                        let volPct = clamp(maxUpPercent / 2.2, 4, 35);
+                        let driftMode = keepPercent >= 60 ? '保守' : keepPercent >= 35 ? '稳健' : '激进';
+                        let initInv = Math.max(100, Math.min(p.cash, Math.floor(p.cash * 0.2 / 100) * 100));
+                        let cr = createCustomStock(p.id, name, initInv, volPct, driftMode);
+                        if (!cr || !cr.ok) { failedActions.push(act); continue; }
                         executed++;
                         success = true;
-                        detail = `创建自建股「${name}」(${maxUpPercent}%/${keepPercent}%)`;
+                        detail = `创建自建股「${name}」并投入${fmt(initInv)}（波动${volPct.toFixed(0)}%/${driftMode}）`;
                         summary.push(detail);
                     } else {
                         errors.push(`未知操作类型：${type}`);

@@ -13,6 +13,54 @@
 
         // ================================================================
 
+        // 高级设置数值校验：非法/越界横幅提示并返回 false（不使用默认值填充）
+        function validateAdminInputs() {
+            const numFields = [
+                {id:'admin-init-money',label:'初始资金',min:1,max:100000000,int:true},
+                {id:'admin-bank-money',label:'银行初始资金',min:1,max:1000000000,int:true},
+                {id:'admin-loot-threshold',label:'掠夺阈值',min:0,max:100000000,int:true},
+                {id:'admin-loot-ratio',label:'掠夺比例',min:1,max:50,int:true},
+                {id:'admin-volatility-scale',label:'波动性缩放',min:0.5,max:2.0,int:false},
+                {id:'admin-banner-duration',label:'横幅停留秒数',min:1,max:15,int:false},
+                {id:'admin-ai-think-min',label:'AI思考下限',min:1,max:12,int:false},
+                {id:'admin-ai-think-max',label:'AI思考上限',min:2,max:15,int:false},
+                {id:'admin-share-price',label:'每股初始价格',min:10,max:100000,int:false},
+                {id:'admin-lottery-win-scale',label:'彩票中奖率缩放',min:0.1,max:3.0,int:false},
+                {id:'admin-darkhorse-multiplier',label:'黑马股倍率',min:1.2,max:4.0,int:false},
+                {id:'admin-darkhorse-prob',label:'黑马股出现概率',min:0.05,max:1.0,int:false},
+                {id:'admin-bankruptcy-threshold',label:'破产阈值',min:10,max:500,int:true},
+                {id:'admin-bankruptcy-fund',label:'破产救助金',min:100,max:5000,int:true}
+            ];
+            for (const f of numFields) {
+                const el = document.getElementById(f.id);
+                if (!el) continue;
+                const raw = el.value.trim();
+                const v = f.int ? parseInt(raw, 10) : parseFloat(raw);
+                if (raw === '' || isNaN(v) || (f.int && !/^-?\d+$/.test(raw))) {
+                    showBanner('「'+f.label+'」请输入有效数字', 'warning', null, '⚠️ 高级设置'); return false;
+                }
+                if (v < f.min || v > f.max) {
+                    showBanner('「'+f.label+'」需在 '+f.min+'~'+f.max+' 之间（当前 '+raw+'）', 'warning', null, '⚠️ 高级设置'); return false;
+                }
+            }
+            const tMinEl = document.getElementById('admin-ai-think-min');
+            const tMaxEl = document.getElementById('admin-ai-think-max');
+            if (tMinEl && tMaxEl) {
+                const tMin = parseFloat(tMinEl.value), tMax = parseFloat(tMaxEl.value);
+                if (!isNaN(tMin) && !isNaN(tMax) && tMin > tMax) {
+                    showBanner('AI思考下限不能大于上限', 'warning', null, '⚠️ 高级设置'); return false;
+                }
+            }
+            let bad = false;
+            document.querySelectorAll('.stock-up-input').forEach(inp => { const v = parseFloat(inp.value); if (isNaN(v) || v < 0 || v > 200) bad = true; });
+            document.querySelectorAll('.stock-down-input').forEach(inp => { const v = parseFloat(inp.value); if (isNaN(v) || v < -90 || v > 0) bad = true; });
+            if (bad) { showBanner('个股上涨幅度需 0~200%、下跌幅度需 -90~0%', 'warning', null, '⚠️ 高级设置'); return false; }
+            let achBad = false;
+            document.querySelectorAll('.ach-reward-input').forEach(inp => { const raw = inp.value.trim(); const v = parseFloat(raw); if (raw === '' || isNaN(v) || v < 0 || v > 100) achBad = true; });
+            if (achBad) { showBanner('成就奖励比例需在 0~100 之间', 'warning', null, '⚠️ 高级设置'); return false; }
+            return true;
+        }
+
         function initGame(loadSave = false) {
             try {
                 if (loadSave && loadGame()) {
@@ -36,11 +84,21 @@
                     return;
                 }
 
-                humanCount = parseInt(document.getElementById('human-players').value) || 1;
-                aiCount = parseInt(document.getElementById('ai-players').value) || 0;
-                totalRounds = parseInt(document.getElementById('total-rounds').value) || 60;
-                if (humanCount < 1) humanCount = 1;
-                if (aiCount < 0) aiCount = 0;
+                // 主设置输入校验：非法/越界时横幅提示并阻止开始，不使用默认值填充
+                function readIntInput(id, label) {
+                    const el = document.getElementById(id);
+                    const raw = el ? el.value.trim() : '';
+                    if (raw === '' || !/^-?\d+$/.test(raw)) { showBanner('「'+label+'」请输入有效整数', 'warning', null, '⚠️ 输入无效'); return null; }
+                    return parseInt(raw, 10);
+                }
+                humanCount = readIntInput('human-players', '人类玩家数');
+                if (humanCount === null) return;
+                aiCount = readIntInput('ai-players', 'AI玩家数');
+                if (aiCount === null) return;
+                totalRounds = readIntInput('total-rounds', '总轮数');
+                if (totalRounds === null) return;
+                if (humanCount < 1 || humanCount > 4) { showBanner('人类玩家数需在 1~4 之间（当前 '+humanCount+'）', 'warning', null, '⚠️ 输入超出范围'); return; }
+                if (aiCount < 0 || aiCount > 3) { showBanner('AI玩家数需在 0~3 之间（当前 '+aiCount+'）', 'warning', null, '⚠️ 输入超出范围'); return; }
                 let totalPlayers = humanCount + aiCount + externalAIConfigs.length;
                 if (totalPlayers > 6) {
                     let maxExtra = 6 - humanCount - aiCount;
@@ -53,8 +111,9 @@
                     }
                     totalPlayers = humanCount + aiCount + externalAIConfigs.length;
                 }
-                if (totalRounds < 10) totalRounds = 10;
-                if (totalRounds > 200) totalRounds = 200;
+                if (totalRounds < 10 || totalRounds > 200) { showBanner('总轮数需在 10~200 之间（当前 '+totalRounds+'）', 'warning', null, '⚠️ 输入超出范围'); return; }
+
+                if (typeof validateAdminInputs === 'function' && !validateAdminInputs()) return;
 
                 // 读取AI难度（始终生效，不限于adminMode）
                 const diffSel = document.getElementById('admin-ai-difficulty');

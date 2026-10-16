@@ -532,10 +532,30 @@
 
     function saveLocalSetup() {
         const read = function(id) { const e = document.getElementById(id); return e ? e.value : null; };
+        // 主设置校验：非法/越界时横幅提示并阻止跳转，不使用默认值填充
+        function intVal(raw, label, min, max) {
+            if (raw === null || raw.trim() === '' || !/^-?\d+$/.test(raw.trim())) {
+                if (typeof showBanner === 'function') showBanner('「'+label+'」请输入有效整数', 'warning', null, '⚠️ 输入无效');
+                return null;
+            }
+            const v = parseInt(raw, 10);
+            if (v < min || v > max) {
+                if (typeof showBanner === 'function') showBanner('「'+label+'」需在 '+min+'~'+max+' 之间（当前 '+v+'）', 'warning', null, '⚠️ 输入超出范围');
+                return null;
+            }
+            return v;
+        }
+        const hp = intVal(read('human-players'), '人类玩家数', 1, 4);
+        if (hp === null) return false;
+        const ap = intVal(read('ai-players'), 'AI玩家数', 0, 3);
+        if (ap === null) return false;
+        const tr = intVal(read('total-rounds'), '总轮数', 10, 200);
+        if (tr === null) return false;
+        if (typeof adminMode !== 'undefined' && adminMode && typeof validateAdminInputs === 'function' && !validateAdminInputs()) return false;
         const cfg = {
-            humanPlayers: parseInt(read('human-players')) || 1,
-            aiPlayers: parseInt(read('ai-players')) || 1,
-            totalRounds: parseInt(read('total-rounds')) || 60,
+            humanPlayers: hp,
+            aiPlayers: ap,
+            totalRounds: tr,
             admin: (typeof adminMode !== 'undefined' && adminMode) ? {
                 initMoney: read('admin-init-money'), bankMoney: read('admin-bank-money'),
                 lootThreshold: read('admin-loot-threshold'), lootRatio: read('admin-loot-ratio'),
@@ -548,11 +568,12 @@
             } : null
         };
         localStorage.setItem('xfw_local_config', JSON.stringify(cfg));
+        return true;
     }
     window.lobbySaveLocalSetup = saveLocalSetup;
 
     window.lobbyStartOnline = function() { askUsername(showMainMenu); };
-    window.lobbyStartLocal = function() { saveLocalSetup(); window.location.href = 'game_local.html'; };
+    window.lobbyStartLocal = function() { if (saveLocalSetup()) window.location.href = 'game_local.html'; };
     window.mpUsernameOk = mpUsernameOk;
     window.mpShowMainMenu = showMainMenu;
     window.mpChangeUsername = mpChangeUsername;

@@ -28,8 +28,8 @@
                 $id('load-save-btn').style.display = 'inline-block';
             }
 
-            // ---- 日志 ----
-            hideLogPanel();
+            // ---- 日志 ----（大厅/等待页隐藏；已自动开局的页面 players 已创建，保持显示）
+            if (typeof players === 'undefined' || !players || players.length === 0) hideLogPanel();
 
             // ---- 规则（仅用于帮助） ----
             updateGameRulesDisplay();

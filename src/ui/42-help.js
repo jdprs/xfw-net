@@ -69,11 +69,11 @@
 
             <div class="help-section">
                 <h3>✨ 自建股</h3>
-                <p>玩家可以 <span class="highlight">创建</span> 自己的股票，设定上涨利率和利润留存比例。</p>
+                <p>玩家可以 <span class="highlight">创办</span> 自己的股票，创办时须由本人投入启动资金（金额自定），并设定 <span class="highlight">波动系数</span> 与风险偏好。</p>
                 <ul>
-                    <li>创建者 <span class="danger">不能</span> 投资自己创建的股票。</li>
-                    <li>其他玩家可以投资自建股（以金额计），共享涨跌。</li>
-                    <li>自建股也会受到 <span class="highlight">黑马股</span> 机制影响。</li>
+                    <li>波动系数决定基础波动率、涨跌停和常见波动区间，创建时下方实时预览各项数据。</li>
+                    <li>创建者持有初始份额，其他玩家也可追加投资（以金额计），共享涨跌。</li>
+                    <li>自建股的 <span class="highlight">上涨/下跌/事件/黑马</span> 与普通股票共用同一套算法。</li>
                 </ul>
             </div>
 

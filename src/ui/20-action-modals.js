@@ -2,46 +2,97 @@
         // ================================================================
 
         function showCreateStockModal(playerId) {
+            let p = players[playerId];
+            if (!p || p.bankrupt) return;
             let overlay = document.createElement('div');
             overlay.style.cssText =
                 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1200;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(3px);';
             let box = document.createElement('div');
             box.style.cssText =
-                'background:var(--bg-card);padding:24px 28px;border-radius:16px;max-width:420px;width:92%;border:2px solid var(--accent-gold);';
+                'background:var(--bg-card);padding:22px 26px;border-radius:16px;max-width:440px;width:92%;border:2px solid var(--accent-gold);max-height:88vh;overflow-y:auto;';
+            const inp = 'width:100%;padding:8px 12px;background:var(--bg-dark);border:2px solid var(--border-color);color:var(--text-primary);border-radius:8px;font-size:0.95rem;margin-top:4px;';
             box.innerHTML = `
-                    <h3 style="color:var(--accent-gold);text-align:center;margin-bottom:14px;">✨ 创建自建股</h3>
+                    <h3 style="color:var(--accent-gold);text-align:center;margin-bottom:6px;">✨ 创办自建股</h3>
+                    <p style="color:var(--text-secondary);font-size:0.78rem;text-align:center;margin-bottom:14px;">创办即上市，须由你本人投入启动资金；涨跌/事件与普通股同一套算法</p>
                     <div style="margin-bottom:10px;">
-                        <label style="color:var(--text-secondary);font-size:0.85rem;">股票名称</label>
-                        <input type="text" id="cs-name" placeholder="如：新能源" style="width:100%;padding:8px 12px;background:var(--bg-dark);border:2px solid var(--border-color);color:var(--text-primary);border-radius:8px;font-size:0.95rem;margin-top:4px;">
+                        <label style="color:var(--text-secondary);font-size:0.85rem;">股票名称（最多12字）</label>
+                        <input type="text" id="cs-name" maxlength="12" placeholder="如：新能源" style="${inp}">
                     </div>
                     <div style="margin-bottom:10px;">
-                        <label style="color:var(--text-secondary);font-size:0.85rem;">上涨最大利率 (%)</label>
-                        <input type="number" id="cs-maxup" value="30" min="1" max="80" style="width:100%;padding:8px 12px;background:var(--bg-dark);border:2px solid var(--border-color);color:var(--text-primary);border-radius:8px;font-size:0.95rem;margin-top:4px;">
+                        <label style="color:var(--text-secondary);font-size:0.85rem;">初始投资（元）<span style="color:#81c784;">现金 ${fmt(p.cash)}</span></label>
+                        <input type="number" id="cs-invest" value="1000" min="100" step="100" placeholder="投多少自己定" style="${inp}">
                     </div>
-                    <div style="margin-bottom:14px;">
-                        <label style="color:var(--text-secondary);font-size:0.85rem;">利润留存比例 (%)</label>
-                        <input type="number" id="cs-keep" value="50" min="10" max="90" style="width:100%;padding:8px 12px;background:var(--bg-dark);border:2px solid var(--border-color);color:var(--text-primary);border-radius:8px;font-size:0.95rem;margin-top:4px;">
-                        <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">留存越高，下跌风险越小</div>
+                    <div style="margin-bottom:10px;">
+                        <label style="color:var(--text-secondary);font-size:0.85rem;">波动系数（%，4~35）</label>
+                        <input type="number" id="cs-vol" value="12" min="4" max="35" step="1" style="${inp}">
                     </div>
+                    <div style="margin-bottom:12px;">
+                        <label style="color:var(--text-secondary);font-size:0.85rem;">风险偏好</label>
+                        <select id="cs-drift" style="${inp}">
+                            <option value="保守">保守（微正向、低期望）</option>
+                            <option value="稳健" selected>稳健（中性）</option>
+                            <option value="激进">激进（高波动、博弹性）</option>
+                        </select>
+                    </div>
+                    <div id="cs-preview" style="background:var(--bg-dark);border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:0.82rem;line-height:1.7;"></div>
                     <div style="display:flex;gap:10px;justify-content:center;">
-                        <button class="btn btn-success" id="cs-confirm">创建</button>
+                        <button class="btn btn-success" id="cs-confirm">创办上市</button>
                         <button class="btn btn-warning" id="cs-cancel">取消</button>
                     </div>
                 `;
             overlay.appendChild(box);
             document.body.appendChild(overlay);
+
+            const nameEl = document.getElementById('cs-name');
+            const invEl = document.getElementById('cs-invest');
+            const volEl = document.getElementById('cs-vol');
+            const driftEl = document.getElementById('cs-drift');
+            const prev = document.getElementById('cs-preview');
+
+            function renderPreview() {
+                let inv = Math.round(Number(invEl.value));
+                let volPct = parseFloat(volEl.value);
+                let validInv = isFinite(inv) && inv > 0;
+                let validVol = isFinite(volPct);
+                if (!validVol) { prev.innerHTML = '<span style="color:#ef5350;">⚠️ 请输入有效的波动系数</span>'; return; }
+                let pm = customStockParams(volPct, driftEl.value);
+                let driftText = pm.drift > 0 ? `<span style="color:#81c784;">+${(pm.drift*100).toFixed(2)}%/轮</span>`
+                    : pm.drift < 0 ? `<span style="color:#ef5350;">${(pm.drift*100).toFixed(2)}%/轮</span>`
+                    : '<span style="color:var(--text-secondary);">约 0%/轮</span>';
+                let invWarn = '';
+                if (!validInv) invWarn = '<div style="color:#ef5350;">⚠️ 请输入初始投资金额</div>';
+                else if (inv > p.cash) invWarn = '<div style="color:#ef5350;">⚠️ 超过现金，最多 '+fmt(p.cash)+'</div>';
+                else if (inv < 100) invWarn = '<div style="color:#ef5350;">⚠️ 至少投入 100 元</div>';
+                prev.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;"><span>初始市值</span><strong>${validInv?fmt(inv):'—'}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>基础波动率</span><strong>${(pm.volatility*100).toFixed(0)}%/轮</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>常见波动区间</span><span>±${(pm.band*100).toFixed(1)}%</span></div>
+                    <div style="display:flex;justify-content:space-between;"><span>涨停 / 跌停</span><span><span style="color:#ef5350;">+${(pm.maxUp*100).toFixed(1)}%</span> / <span style="color:#4caf50;">−${(pm.maxDown*100).toFixed(1)}%</span></span></div>
+                    <div style="display:flex;justify-content:space-between;"><span>长期趋势</span>${driftText}</div>
+                    <div style="display:flex;justify-content:space-between;"><span>风险评级</span><strong>${pm.riskLevel}</strong></div>
+                    ${invWarn}
+                `;
+            }
+            [nameEl, invEl, volEl, driftEl].forEach(el => el.addEventListener('input', renderPreview));
+            driftEl.addEventListener('change', renderPreview);
+            renderPreview();
+
             document.getElementById('cs-confirm').onclick = () => {
-                let name = document.getElementById('cs-name').value.trim();
-                let maxUp = parseFloat(document.getElementById('cs-maxup').value) || 30;
-                let keep = parseFloat(document.getElementById('cs-keep').value) || 50;
+                let name = nameEl.value.trim();
                 if (!name) { showBanner('请为自建股起一个名字', 'warning', null, '⚠️ 操作失败'); return; }
-                createCustomStock(playerId, name, maxUp, keep);
-                overlay.remove();
+                let inv = Math.round(Number(invEl.value));
+                if (!isFinite(inv) || invEl.value.trim()==='') { showBanner('请输入初始投资金额', 'warning', null, '⚠️ 操作失败'); return; }
+                if (inv < 100) { showBanner('初始投资至少 100 元', 'warning', null, '⚠️ 操作失败'); return; }
+                if (inv > p.cash) { showBanner(`初始投资不能超过现金 ${fmt(p.cash)}`, 'warning', null, '⚠️ 操作失败'); return; }
+                let volPct = parseFloat(volEl.value);
+                if (!isFinite(volPct) || volEl.value.trim()==='') { showBanner('请输入波动系数', 'warning', null, '⚠️ 操作失败'); return; }
+                if (volPct < 4 || volPct > 35) { showBanner('波动系数需在 4~35 之间', 'warning', null, '⚠️ 操作失败'); return; }
+                let res = createCustomStock(playerId, name, inv, volPct, driftEl.value);
+                if (res && res.ok) overlay.remove();
             };
             document.getElementById('cs-cancel').onclick = () => overlay.remove();
             overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
         }
-
         function showBuyLotteryModal(playerId) {
             let p = players[playerId];
             if (!p || p.bankrupt) return;

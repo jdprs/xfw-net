@@ -256,7 +256,7 @@
                 case 'sell_stock': withdrawStock(pid, d.stock, d.shares); break;
                 case 'buy_custom': investCustomStock(pid, d.stockId, d.amount); break;
                 case 'sell_custom': withdrawCustomStock(pid, d.stockId, d.amount); break;
-                case 'create_custom': createCustomStock(pid, d.name, d.maxUp, d.keep); break;
+                case 'create_custom': createCustomStock(pid, d.name, d.initInvestment, d.volPct, d.driftMode); break;
                 case 'buy_lottery': buyLottery(pid, d.lotteryId, d.qty); break;
                 case 'predict': makePrediction(pid, d.stock, d.direction, d.amount); break;
                 case 'undo_predict': undoPrediction(pid); break;
@@ -361,7 +361,7 @@
             withdrawStock: (pid, stock, shares) => ['sell_stock', { stock, shares }],
             investCustomStock: (pid, stockId, amount) => ['buy_custom', { stockId, amount }],
             withdrawCustomStock: (pid, stockId, amount) => ['sell_custom', { stockId, amount }],
-            createCustomStock: (pid, name, maxUp, keep) => ['create_custom', { name, maxUp, keep }],
+            createCustomStock: (pid, name, initInvestment, volPct, driftMode) => ['create_custom', { name, initInvestment, volPct, driftMode }],
             buyLottery: (pid, lotteryId, qty) => ['buy_lottery', { lotteryId, qty }],
             makePrediction: (pid, stock, direction, amount) => ['predict', { stock, direction, amount }],
             undoPrediction: (pid) => ['undo_predict', {}],

@@ -37,6 +37,9 @@
         let lotteryJackpot = 0;
 
         let adminMode = false;
+        // 暴露给内联脚本（onAllModulesLoaded 早于 window.onload，无法用 enableAdminSettings）
+        window.setAdminMode = function(v) { adminMode = !!v; };
+        window.getAdminMode = function() { return adminMode };
         let INIT_PLAYER_MONEY = 5000;
         let INIT_BANK_MONEY = 200000;
         let LOOT_THRESHOLD = 8000;

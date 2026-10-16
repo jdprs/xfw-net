@@ -3,11 +3,21 @@
 
         function updatePlayersDisplay() {
             let container = document.getElementById('players-container');
+            // 重绘前保存投资输入框草稿（避免买A后清空B已填数量）
+            let draft = {};
+            container.querySelectorAll('input[id^="inv-"], input[id^="cinv-"]').forEach(inp => {
+                if (inp.value !== '' && !inp.disabled) draft[inp.id] = inp.value;
+            });
             container.innerHTML = '';
             players.forEach((p, idx) => {
                 let card = renderPlayerCard(p);
                 container.appendChild(card);
                 bindPlayerCardEvents(card, p);
+            });
+            // 重绘后恢复草稿
+            Object.keys(draft).forEach(id => {
+                let inp = document.getElementById(id);
+                if (inp && !inp.disabled) inp.value = draft[id];
             });
             updateDecisionUI();
         }
@@ -167,7 +177,7 @@
                 }).join('');
 
                 let customControls = customStocks.map(cs => {
-                    if (cs.creatorId === p.id) return '';
+                    // 创建者初始持有，也允许追加/取回（不再限制）
                     let isDark = currentDarkHorse && currentDarkHorse.key === `custom_${cs.id}`;
                     let darkTag = isDark ? ' 🐴' : '';
                     let disabled = decisionState !== 'deciding' || decidingPlayerId !== p.id || !isMine;
@@ -462,7 +472,7 @@
         // ===== 绑定自建股控件 =====
         function bindCustomStockControls(card, p) {
             customStocks.forEach(cs => {
-                if (cs.creatorId === p.id) return;
+                // 创建者同样绑定追加/取回控件
                 let input = document.getElementById(`cinv-${cs.id}-${p.id}`);
                 if (!input) return;
 

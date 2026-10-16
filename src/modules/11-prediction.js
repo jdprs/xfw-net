@@ -212,16 +212,16 @@
 
             let amountInput = document.getElementById('pred-amount');
             amountInput.onchange = function() {
-                let v = parseInt(this.value) || 0;
-                if (v > maxBet) { this.value = maxBet;
-                    showBanner(`押注上限为 ${fmt(maxBet)}`, 'warning', null, '🔮 上限'); }
-                if (v < 1) this.value = 1;
+                let v = parseInt(this.value);
+                if (!isNaN(v) && v > maxBet) { showBanner(`押注上限为 ${fmt(maxBet)}`, 'warning', null, '🔮 上限'); }
             };
 
             function getPredAmount() {
-                let v = parseInt(amountInput.value) || 0;
-                if (v < 1) v = 1;
-                if (v > maxBet) v = maxBet;
+                const raw = amountInput.value.trim();
+                if (raw === '' || !/^\d+$/.test(raw)) { showBanner('请输入有效押注金额（正整数）', 'warning', null, '🔮 预测失败'); return null; }
+                let v = parseInt(raw, 10);
+                if (v < 1) { showBanner('押注金额至少 1 元', 'warning', null, '🔮 预测失败'); return null; }
+                if (v > maxBet) { showBanner(`押注上限为 ${fmt(maxBet)}`, 'warning', null, '🔮 预测失败'); return null; }
                 return v;
             }
 
