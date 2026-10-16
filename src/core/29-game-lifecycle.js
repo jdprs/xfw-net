@@ -283,12 +283,6 @@
 
                 showLogPanel();
                 document.getElementById('history-log').innerHTML = '';
-                updateUI();
-                updatePlayersDisplay();
-                updateLeaderboard();
-                initCharts();
-                updateStockStatus();
-
                 let playerTypes = [];
                 players.forEach(p => {
                     if (p.isAI) playerTypes.push(`${p.name} (场内AI ${p.aiStrategy})`);
@@ -296,6 +290,12 @@
                     else playerTypes.push(`${p.name} (真人)`);
                 });
                 addLog(`🚀 新游戏开始！${players.length}位玩家：${playerTypes.join('、')}`, 'highlight');
+                const safeRun = (fn, label) => { try { fn(); } catch (e) { console.error('[' + label + ']', e); } };
+                safeRun(updateUI, 'updateUI');
+                safeRun(updatePlayersDisplay, 'updatePlayersDisplay');
+                safeRun(updateLeaderboard, 'updateLeaderboard');
+                safeRun(initCharts, 'initCharts');
+                safeRun(updateStockStatus, 'updateStockStatus');
                 showBanner(`🎂 v10.0 新游戏开始！`, 'success', null, '🚀 游戏启动');
                 updateCloseMarketButton();
                 updateEndGameButton();

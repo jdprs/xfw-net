@@ -5,6 +5,16 @@
             let ac = document.getElementById('assets-chart');
             let sc = document.getElementById('stocks-chart');
             if (!ac || !sc) return;
+            if (typeof Chart === 'undefined') {
+                // Chart.js 尚未就绪（本地脚本加载失败等），有限重试，不阻塞游戏初始化
+                if (window.__chartRetryCount === undefined) window.__chartRetryCount = 0;
+                if (window.__chartRetryCount < 40) {
+                    window.__chartRetryCount++;
+                    window.__chartRetryTimer = setTimeout(initCharts, 250);
+                }
+                return;
+            }
+            window.__chartRetryCount = 0;
             let colors = ['#ffd700', '#81c784', '#e57373', '#ce93d8', '#4db6ac', '#ffb74d', '#4dd0e1', '#ff8a65', '#aed581'];
             let ds = players.map((p, i) => ({
                 label: p.name,
@@ -60,7 +70,10 @@
         }
 
         function updateCharts() {
-            if (!assetsChart || !stocksChart) return;
+            if (!assetsChart || !stocksChart) {
+                if (typeof Chart !== 'undefined' && document.getElementById('assets-chart')) initCharts();
+                return;
+            }
             if (assetsChart.data.datasets.length !== players.length) {
                 initCharts();
                 let labels = assetsHistory.map((_, i) => `R${i+1}`);

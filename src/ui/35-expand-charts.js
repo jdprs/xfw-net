@@ -40,6 +40,7 @@
         // —— 玩家涨跌：每位玩家一张资产走势迷你图 ——
         function renderPlayerMiniCharts() {
             let grid = document.getElementById('expand-grid');
+            if (typeof Chart === 'undefined') { grid.innerHTML = '<div class="expand-empty">📊 图表库加载中，请稍后重试</div>'; return; }
             if (!assetsHistory || assetsHistory.length === 0) {
                 grid.innerHTML = '<div class="expand-empty">📭 暂无数据，完成至少一轮收盘后即可查看</div>';
                 return;
@@ -90,6 +91,7 @@
         // —— 股票涨跌：每只股票一张涨跌幅走势迷你图 ——
         function renderStockMiniCharts() {
             let grid = document.getElementById('expand-grid');
+            if (typeof Chart === 'undefined') { grid.innerHTML = '<div class="expand-empty">📊 图表库加载中，请稍后重试</div>'; return; }
             if (!stocksHistory || stocksHistory.length === 0) {
                 grid.innerHTML = '<div class="expand-empty">📭 暂无数据，完成至少一轮收盘后即可查看</div>';
                 return;

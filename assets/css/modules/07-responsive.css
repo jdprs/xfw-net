@@ -93,7 +93,8 @@
                 right: 0;
                 top: 0;
                 width: 100%;
-                height: 45vh;
+                height: auto;
+                min-height: 168px;
                 max-height: 45vh;
                 border-radius: 0;
                 border-left: none;
