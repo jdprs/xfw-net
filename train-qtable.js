@@ -145,7 +145,7 @@ function playGame(totalRounds) {
 
 // ---------- 训练 ----------
 console.log('开始训练...');
-const GAMES = 50000;
+const GAMES = 1000000;
 for (let i = 0; i < GAMES; i++) {
     playGame(60);
     if ((i + 1) % 5000 === 0) {

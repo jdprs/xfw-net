@@ -33,7 +33,8 @@
             right: 16px;
             top: 80px;
             width: 320px;
-            max-height: calc(100vh - 120px);
+            height: calc(100vh - 110px);
+            max-height: calc(100vh - 110px);
             background: var(--bg-card);
             padding: 14px 16px;
             border-radius: var(--radius);
