@@ -111,6 +111,7 @@
             });
 
             customStocks.forEach((cs, idx) => {
+                if (cs.revoked) return;
                 let isDark = (darkHorseKey === `custom_${idx}`);
                 let dhMult = isDark ? darkHorseMult : 1;
                 let mult = calcStockMultiplier(cs, true, dhMult);

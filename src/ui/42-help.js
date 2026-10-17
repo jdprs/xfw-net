@@ -69,10 +69,13 @@
 
             <div class="help-section">
                 <h3>✨ 自建股</h3>
-                <p>玩家可以 <span class="highlight">创办</span> 自己的股票，创办时须由本人投入启动资金（金额自定），并设定 <span class="highlight">波动系数</span> 与风险偏好。</p>
+                <p>玩家可以 <span class="highlight">创办</span> 自己的股票，创办时须由本人投入启动资金（金额自定），并设定 <span class="highlight">风险等级</span> 与 <span class="highlight">波动系数</span>。</p>
                 <ul>
-                    <li>波动系数决定基础波动率、涨跌停和常见波动区间，创建时下方实时预览各项数据。</li>
-                    <li>创建者持有初始份额，其他玩家也可追加投资（以金额计），共享涨跌。</li>
+                    <li><b>初始投资</b> 决定上涨与下跌的比例（投资越多，上涨相对下跌越大）。</li>
+                    <li><b>风险等级</b> 同时决定涨停与跌停的幅度（风险越高，涨跌都越大）。</li>
+                    <li><b>波动系数</b> 决定每轮实际涨跌的量。创建时下方实时预览各项数据。</li>
+                    <li>创办者持有初始份额，其他玩家也可追加投资（以金额计），共享涨跌。</li>
+                    <li>创办者可随时 <span class="highlight">撤销创建</span>，所有持有者按当前价值退回现金。</li>
                     <li>自建股的 <span class="highlight">上涨/下跌/事件/黑马</span> 与普通股票共用同一套算法。</li>
                 </ul>
             </div>

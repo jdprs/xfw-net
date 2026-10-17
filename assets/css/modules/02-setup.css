@@ -24,6 +24,11 @@
             position: relative;
             display: flex;
             justify-content: center;
+            z-index: 1;
+        }
+        .home-btn-wrap:hover,
+        .home-btn-wrap:focus-within {
+            z-index: 10;
         }
         .home-mode-btn {
             position: relative;
@@ -32,9 +37,9 @@
             font-size: 1.02rem;
             padding: 12px 18px;
         }
-        /* 顺次浮出入场 */
-        body:not(.no-anim) .home-rise {
-            opacity: 0;
+        /* 顺次浮出入场（健康提示关闭后才播放） */
+        body:not(.no-anim) .home-rise { opacity: 0; }
+        body:not(.no-anim).health-dismissed .home-rise {
             animation: homeRise 0.5s cubic-bezier(0.2,0.7,0.3,1) forwards;
             animation-delay: calc(var(--d) * 0.09s + 0.08s);
         }
@@ -80,7 +85,7 @@
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
-            z-index: 20;
+            z-index: 30;
             transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
         }
         .home-btn-wrap:hover .home-mode-pop,

@@ -67,7 +67,7 @@
             if (p.customStockInvestments) {
                 Object.entries(p.customStockInvestments).forEach(([cid, val]) => {
                     let cs = customStocks[parseInt(cid)];
-                    if (cs && val > 0) {
+                    if (cs && !cs.revoked && val > 0) {
                         let isDark = currentDarkHorse && currentDarkHorse.key === `custom_${cs.id}`;
                         let darkTag = isDark ? ' 🐴' : '';
                         customRows +=
@@ -176,7 +176,7 @@
                         </div>`;
                 }).join('');
 
-                let customControls = customStocks.map(cs => {
+                let customControls = customStocks.filter(cs => !cs.revoked).map(cs => {
                     // 创建者初始持有，也允许追加/取回（不再限制）
                     let isDark = currentDarkHorse && currentDarkHorse.key === `custom_${cs.id}`;
                     let darkTag = isDark ? ' 🐴' : '';
@@ -192,6 +192,7 @@
                                 <button class="btn-sm btn-sm-invest inv-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>买</button>
                                 <button class="btn-sm btn-sm-withdraw wdr-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>卖</button>
                                 <button class="btn-sm btn-sm-max max-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>上限</button>
+                                ${cs.creatorId === p.id ? `<button class="btn-sm revoke-custom" data-cid="${cs.id}" data-pid="${p.id}" title="撤销创建并退回所有持仓" style="background:rgba(198,40,40,0.15);border:1px solid var(--danger-red);color:var(--danger-red);">撤销</button>` : ''}
                             </div>
                         </div>`;
                 }).filter(s => s).join('');
@@ -571,6 +572,16 @@
                         input.focus();
                         input.select();
                         showBanner(`最多可投 ${fmt(p.cash)}`, 'info', null, '📊 上限');
+                    };
+                }
+                // 撤销创建（仅创办者可见）
+                let revokeBtn = card.querySelector(`.revoke-custom[data-cid="${cs.id}"][data-pid="${p.id}"]`);
+                if (revokeBtn) {
+                    revokeBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        if (cs.creatorId !== p.id) return;
+                        if (!confirm(`确定撤销自建股「${cs.name}」？所有持有者将按当前价值退回现金。`)) return;
+                        revokeCustomStock(p.id, cs.id);
                     };
                 }
             });

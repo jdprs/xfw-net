@@ -40,7 +40,7 @@
             });
             let div = document.getElementById('custom-stock-status');
             if (div) {
-                div.innerHTML = customStocks.map(cs => {
+                div.innerHTML = customStocks.filter(cs => !cs.revoked).map(cs => {
                     let isDark = currentDarkHorse && currentDarkHorse.key === `custom_${cs.id}`;
                     let darkTag = isDark ? ' 🐴' : '';
                     return `<p>${cs.name}${darkTag}：${cs.recentMultiplier > 1.005 ? '📈' : cs.recentMultiplier < 0.995 ? '📉' : '➖'} ${((cs.recentMultiplier-1)*100).toFixed(1)}%</p>`;
