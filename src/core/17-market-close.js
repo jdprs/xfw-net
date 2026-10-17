@@ -250,6 +250,16 @@
                         if (p._qLastAssets && p._qLastAssets > 0) {
                             reward = (p.totalAssets() - p._qLastAssets) / p._qLastAssets;
                         }
+                        // v10.2: 排名提升额外正奖励，排名下降额外负奖励
+                        if (typeof players !== 'undefined' && players.length > 1) {
+                            let sorted = [...players].filter(pp => !pp.bankrupt).sort((a,b)=>b.totalAssets()-a.totalAssets());
+                            let curRank = sorted.findIndex(pp => pp.id === p.id);
+                            if (p._qLastRank !== undefined && curRank >= 0) {
+                                if (curRank < p._qLastRank) reward += 0.05;  // 排名上升
+                                else if (curRank > p._qLastRank) reward -= 0.03; // 排名下降
+                            }
+                            p._qLastRank = curRank;
+                        }
                         QLearner.update(p._qLastState, p._qLastAction, reward, nextState);
                         p._qLastAssets = p.totalAssets();
                     }

@@ -239,7 +239,7 @@
             let badge = '';
             if (p.isAI) {
                 let diffLabel = {easy:'🟢易',medium:'🟡中',hard:'🔴难'}[p.aiDifficulty] || '';
-                badge = `<span class="ai-badge">${p.aiStrategy}${diffLabel?' · '+diffLabel:''}</span>`;
+                badge = `<span class="ai-badge">🤖 场内AI${diffLabel?' · '+diffLabel:''}</span>`;
             }
             else if (p.isExternal) {
                 let cfg = externalAIConfigs.find(c => c.playerId === p.id);
@@ -255,7 +255,7 @@
                     thinkHtml =
                         `<div class="ai-think">🤖 思考中…已思考 <span class="think-timer">${elapsed}</span> 秒</div>`;
                 } else {
-                    thinkHtml = `<div class="ai-think">🤖 ${p.aiStrategy} · 多因子决策引擎</div>`;
+                    thinkHtml = `<div class="ai-think">🤖 多因子决策引擎（Q学习+自适应）</div>`;
                 }
             } else if (p.isExternal && !p.bankrupt) {
                 let cfg = externalAIConfigs.find(c => c.playerId === p.id);
@@ -423,9 +423,8 @@
                     let shares = parseInt(raw);
                     if (isNaN(shares) || shares < 0) { showBanner('请输入有效整数', 'warning', null, '⚠️ 操作失败'); return; }
                     if (shares < 1) { showBanner('至少买入1股', 'warning', null, '⚠️ 操作失败'); return; }
+                    input.value = '';  // 先清空当前框（重绘前清空，草稿不会恢复它）
                     investStock(p.id, s, shares);
-                    input.value = '';
-                    input.blur();
                 };
 
                 let wdrBtn = card.querySelector(`.wdr-stock[data-stock="${s}"][data-pid="${p.id}"]`);
@@ -442,9 +441,8 @@
                     if (shares < 1) { showBanner('至少卖出1股', 'warning', null, '⚠️ 操作失败'); return; }
                     let key = `shares${s}`;
                     if ((p[key] || 0) < shares) { showBanner(`最多 ${p[key]||0}股`, 'warning', null, '⚠️ 持仓不足'); return; }
-                    withdrawStock(p.id, s, shares);
                     input.value = '';
-                    input.blur();
+                    withdrawStock(p.id, s, shares);
                 };
 
                 let maxBtn = card.querySelector(`.max-stock[data-stock="${s}"][data-pid="${p.id}"]`);
@@ -531,9 +529,8 @@
                     if (v < 1) { showBanner('投资金额至少为1元', 'warning', null, '⚠️ 操作失败'); return; }
                     let rounded = Math.round(v);
                     if (rounded > p.cash) { showBanner(`最多 ${fmt(p.cash)}`, 'warning', null, '⚠️ 现金不足'); return; }
-                    investCustomStock(p.id, cs.id, rounded);
                     input.value = '';
-                    input.blur();
+                    investCustomStock(p.id, cs.id, rounded);
                 };
 
                 let wdrBtn = card.querySelector(`.wdr-custom[data-cid="${cs.id}"][data-pid="${p.id}"]`);
@@ -551,9 +548,8 @@
                     let rounded = Math.round(v);
                     let inv = p.customStockInvestments?.[cs.id] || 0;
                     if (rounded > inv) { showBanner(`最多 ${fmt(inv)}`, 'warning', null, '⚠️ 持仓不足'); return; }
-                    withdrawCustomStock(p.id, cs.id, rounded);
                     input.value = '';
-                    input.blur();
+                    withdrawCustomStock(p.id, cs.id, rounded);
                 };
 
                 let maxBtn = card.querySelector(`.max-custom[data-cid="${cs.id}"][data-pid="${p.id}"]`);

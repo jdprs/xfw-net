@@ -101,7 +101,6 @@
                     isAI: false,
                     isExternal: true,
                     isHuman: false,
-                    aiStrategy: null,
                     _lastRating: 'D',
                     totalAssets: function() {
                         let stockVal = ['A', 'B', 'C', 'D'].reduce((sum, k) => {

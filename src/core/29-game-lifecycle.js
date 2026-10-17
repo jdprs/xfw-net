@@ -284,7 +284,6 @@
                         isAI: false,
                         isExternal: false,
                         isHuman: true,
-                        aiStrategy: null,
                         _lastRating: 'D',
                         totalAssets: function() {
                             let stockVal = ['A', 'B', 'C', 'D'].reduce((sum, k) => {
@@ -301,7 +300,6 @@
                 }
                 let aiStart = humanCount;
                 for (let i = 0; i < aiCount; i++) {
-                    let strategy = AI_STRATEGIES[randInt(0, AI_STRATEGIES.length - 1)];
                     const p = {
                         id: aiStart + i,
                         name: `AI${i+1}`,
@@ -315,7 +313,6 @@
                         isAI: true,
                         isExternal: false,
                         isHuman: false,
-                        aiStrategy: strategy,
                         aiDifficulty: assignAIDifficulty(),
                         _lastRating: 'D',
                         totalAssets: function() {
@@ -344,7 +341,7 @@
                 document.getElementById('history-log').innerHTML = '';
                 let playerTypes = [];
                 players.forEach(p => {
-                    if (p.isAI) playerTypes.push(`${p.name} (场内AI ${p.aiStrategy})`);
+                    if (p.isAI) playerTypes.push(`${p.name} (场内AI)`);
                     else if (p.isExternal) playerTypes.push(`${p.name} (外接AI)`);
                     else playerTypes.push(`${p.name} (真人)`);
                 });
@@ -387,7 +384,7 @@
             sorted.forEach((p, i) => {
                 let div = document.createElement('div');
                 div.className = 'ranking-item';
-                let tag = p.isAI ? ` (${p.aiStrategy})` : p.isExternal ? ' 🌐' : '';
+                let tag = p.isAI ? ' (🤖AI)' : p.isExternal ? ' 🌐' : '';
                 let achieveCount = p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0;
                 let badge = achieveCount > 0 ? `<span class="achieve-badge">🏅${achieveCount}</span>` : '';
                 let rating = p._lastRating || 'D';
@@ -398,7 +395,7 @@
             players.filter(p => p.bankrupt).forEach(p => {
                 let div = document.createElement('div');
                 div.className = 'ranking-item';
-                let tag = p.isAI ? ` (${p.aiStrategy})` : p.isExternal ? ' 🌐' : '';
+                let tag = p.isAI ? ' (🤖AI)' : p.isExternal ? ' 🌐' : '';
                 let achieveCount = p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0;
                 let badge = achieveCount > 0 ? `<span class="achieve-badge">🏅${achieveCount}</span>` : '';
                 div.innerHTML =
@@ -417,7 +414,7 @@
                         winner: msg,
                         rankings: sorted.map(p => ({
                             name: p.name, total: Math.round(p.totalAssets()),
-                            isAI: !!p.isAI, isExternal: !!p.isExternal, aiStrategy: p.aiStrategy || '',
+                            isAI: !!p.isAI, isExternal: !!p.isExternal,
                             rating: p._lastRating || 'D',
                             achieveCount: p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0,
                             bankrupt: false

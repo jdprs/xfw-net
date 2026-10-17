@@ -476,7 +476,7 @@
                             if (p.bankrupt) {
                                 div.innerHTML = `<div><span class="rank-number">💀</span><strong>${p.name}</strong> 破产 ${badge}</div><div>¥0</div>`;
                             } else {
-                                const tag = p.isAI ? ` (${p.aiStrategy || ''})` : p.isExternal ? ' 🌐' : '';
+                                const tag = p.isAI ? ' (🤖AI)' : p.isExternal ? ' 🌐' : '';
                                 div.innerHTML = `<div><span class="rank-number">#${i + 1}</span><strong>${p.name}${tag}</strong> ${badge} <span class="rating-badge rating-${p.rating || 'D'}">${p.rating || 'D'}</span></div><div>${p.total}</div>`;
                             }
                             rl.appendChild(div);

@@ -186,7 +186,6 @@
             effect: () => ({ all: true, multiplier: 0.90 })
         }];
 
-        const AI_STRATEGIES = ['稳健型', '平衡型', '进取型', '趋势跟随', '逆向投资', '价值发现'];
 
         let assetsChart = null;
         let stocksChart = null;

@@ -1,9 +1,9 @@
-// 11. Q-Learning AI 决策引擎（难AI使用，跨游戏在线学习，localStorage持久化）
+// 11. Q-Learning AI 决策引擎（v10.2：支持创建/投资自建股、模仿领先者）
 (function () {
     const ALPHA = 0.12;   // 学习率
     const GAMMA = 0.85;   // 折扣因子
-    const EPSILON = 0.08; // 探索率
-    const ACTIONS = ['buy_A', 'buy_B', 'buy_C', 'buy_D', 'hold'];
+    const EPSILON = 0.10; // 探索率（新动作多，略提高探索）
+    const ACTIONS = ['buy_A', 'buy_B', 'buy_C', 'buy_D', 'create_custom', 'invest_custom', 'copy_leader', 'hold'];
 
     let qTable = {};
     try {
@@ -11,7 +11,7 @@
         if (raw) qTable = JSON.parse(raw) || {};
     } catch (e) { qTable = {}; }
 
-    // 合并预训练 Q 表（50000局训练），玩家已学习的优先
+    // 合并预训练 Q 表，玩家已学习的优先
     if (window.PRETRAINED_QTABLE) {
         for (let k in window.PRETRAINED_QTABLE) {
             if (!qTable[k]) qTable[k] = Object.assign({}, window.PRETRAINED_QTABLE[k]);
@@ -27,7 +27,7 @@
         try { localStorage.setItem('xfw_qtable', JSON.stringify(qTable)); } catch (e) {}
     }
 
-    // 离散化状态：市场情绪_仓位_轮次_最强趋势
+    // 离散化状态：市场情绪_仓位_轮次_最强趋势_排名_自建股数
     function getStateKey(player, marketData) {
         let sentiment = (marketData && marketData.marketSentiment) || 0.5;
         let sent = sentiment < 0.35 ? 'L' : sentiment < 0.65 ? 'M' : 'H';
@@ -37,6 +37,12 @@
         for (let k of ['A', 'B', 'C', 'D']) {
             stockVal += (player['shares' + k] || 0) * ((typeof stocks !== 'undefined' && stocks[k] && stocks[k].price) || 100);
         }
+        // 自建股持仓也算入仓位
+        if (player.customStockInvestments) {
+            for (let cid in player.customStockInvestments) {
+                stockVal += player.customStockInvestments[cid] || 0;
+            }
+        }
         let ratio = total > 0 ? stockVal / total : 0;
         let pos = ratio < 0.2 ? 'L' : ratio < 0.6 ? 'M' : 'H';
 
@@ -44,7 +50,7 @@
         let tr = (typeof totalRounds !== 'undefined') ? totalRounds : 60;
         let rnd = r < tr / 3 ? 'E' : r < tr * 2 / 3 ? 'M' : 'L';
 
-        // 最强趋势股（最近涨幅最大的）
+        // 最强趋势股
         let best = 'N', bestMult = -Infinity;
         if (typeof stocks !== 'undefined') {
             for (let k of ['A', 'B', 'C', 'D']) {
@@ -52,7 +58,22 @@
                 if (m > bestMult) { bestMult = m; best = k; }
             }
         }
-        return sent + '_' + pos + '_' + rnd + '_' + best;
+
+        // 排名维度（v10.2 新增）：领先/中游/落后
+        let rank = 'M';
+        if (typeof players !== 'undefined' && players.length > 1) {
+            let sorted = [...players].filter(p => !p.bankrupt).sort((a, b) => b.totalAssets() - a.totalAssets());
+            let idx = sorted.findIndex(p => p.id === player.id);
+            if (idx === 0) rank = 'F';          // 领先（第一）
+            else if (idx >= sorted.length - 1) rank = 'B'; // 落后（最后）
+            else rank = 'M';
+        }
+
+        // 自建股数量维度（v10.2 新增）
+        let customCount = (typeof customStocks !== 'undefined') ? customStocks.filter(cs => !cs.revoked).length : 0;
+        let cust = customCount === 0 ? '0' : customCount === 1 ? '1' : '2';
+
+        return sent + '_' + pos + '_' + rnd + '_' + best + '_' + rank + '_' + cust;
     }
 
     function randomAction() {
@@ -72,7 +93,7 @@
         return best;
     }
 
-    // 难AI选动作：ε-greedy，Q表无数据时退回null（由规则引擎决策）
+    // ε-greedy，Q表无数据时退回null（由规则引擎决策）
     function chooseAction(stateKey) {
         if (Math.random() < EPSILON) return randomAction();
         return bestAction(stateKey);

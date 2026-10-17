@@ -57,7 +57,7 @@
                 if (i === 0) cls += ' current-leader';
                 if (p.isExternal) cls += ' external-leader';
                 let diffTag = {easy:'🟢',medium:'🟡',hard:'🔴'}[p.aiDifficulty] || '';
-                let tag = p.isAI ? ` (${p.aiStrategy}${diffTag})` : p.isExternal ? ' 🌐' : '';
+                let tag = p.isAI ? ` (🤖AI${diffTag})` : p.isExternal ? ' 🌐' : '';
                 let achieveCount = p.achievements ? Object.values(p.achievements).filter(a => a.unlocked).length : 0;
                 let badge = achieveCount > 0 ? `<span class="achieve-badge">🏅${achieveCount}</span>` : '';
                 let rating = p._lastRating || 'D';
