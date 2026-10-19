@@ -1,4 +1,73 @@
 //  7. 自建股
+
+        // 自建股详情弹窗
+        function showCustomStockDetail(stockId) {
+            let cs = customStocks[stockId];
+            if (!cs) return;
+            let creator = players[cs.creatorId];
+            let creatorName = creator ? creator.name : '未知';
+            // 持仓统计
+            let holderCount = 0, totalHolding = 0;
+            for (let p of players) {
+                let inv = p.customStockInvestments && p.customStockInvestments[cs.id];
+                if (inv && inv > 0) { holderCount++; totalHolding += inv; }
+            }
+            // 近期涨跌（最近8轮）
+            let hist = cs.history || [];
+            let recentHtml = '';
+            if (hist.length > 0) {
+                let recent = hist.slice(-8);
+                recentHtml = recent.map((h,i) => {
+                    let m = h.multiplier || 1;
+                    let pct = ((m - 1) * 100).toFixed(1);
+                    let color = m >= 1 ? 'var(--profit-green,#4ade80)' : 'var(--danger-red,#f87171)';
+                    let arrow = m >= 1 ? '▲' : '▼';
+                    return `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:${color};font-size:0.8rem;">${arrow}${pct}%</span>`;
+                }).join('');
+            } else {
+                recentHtml = '<span style="color:var(--text-secondary);">暂无历史数据</span>';
+            }
+            let riskColor = cs.riskLevel === '高' ? '#f87171' : cs.riskLevel === '中' ? '#facc15' : '#4ade80';
+            let ratioText = cs.ratio ? cs.ratio.toFixed(2) + ' : 1' : '—';
+            let body = `
+                <div style="text-align:left;font-size:0.9rem;line-height:1.8;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px;">
+                        <div><span style="color:var(--text-secondary);">创建者：</span>${creatorName}</div>
+                        <div><span style="color:var(--text-secondary);">初始投资：</span>${fmt(cs.initInvestment || 0)}</div>
+                        <div><span style="color:var(--text-secondary);">当前市值：</span><strong style="color:var(--accent-gold);">${fmt(cs.value || 0)}</strong></div>
+                        <div><span style="color:var(--text-secondary);">涨跌比：</span>${ratioText}</div>
+                        <div><span style="color:var(--text-secondary);">风险等级：</span><span style="color:${riskColor};font-weight:bold;">${cs.riskLevel || '—'}</span></div>
+                        <div><span style="color:var(--text-secondary);">波动系数：</span>${cs.volatility ? (cs.volatility*100).toFixed(0) + '%' : '—'}</div>
+                        <div><span style="color:var(--text-secondary);">涨停：</span><span style="color:var(--profit-green,#4ade80);">+${((cs.maxUp||0)*100).toFixed(0)}%</span></div>
+                        <div><span style="color:var(--text-secondary);">跌停：</span><span style="color:var(--danger-red,#f87171);">-${((cs.maxDown||0)*100).toFixed(0)}%</span></div>
+                        <div><span style="color:var(--text-secondary);">持仓人数：</span>${holderCount} 人</div>
+                        <div><span style="color:var(--text-secondary);">总持仓额：</span>${fmt(totalHolding)}</div>
+                    </div>
+                    <div style="margin-bottom:8px;color:var(--text-secondary);">近期涨跌（最近8轮）：</div>
+                    <div style="margin-bottom:8px;">${recentHtml}</div>
+                    <div style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;">股票ID: #${cs.id} · 创办者可撤销创建并退回所有持仓</div>
+                </div>`;
+            // 用 info-modal 显示
+            let overlay = document.getElementById('info-modal');
+            if (overlay) {
+                document.getElementById('info-modal-title').textContent = '📊 ' + cs.name + ' · 自建股详情';
+                document.getElementById('info-modal-body').innerHTML = body;
+                overlay.classList.add('active');
+                document.body.classList.add('modal-open');
+                let okBtn = document.getElementById('info-modal-ok');
+                okBtn.onclick = function() {
+                    overlay.classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                };
+                overlay.onclick = function(e) {
+                    if (e.target === overlay) {
+                        overlay.classList.remove('active');
+                        document.body.classList.remove('modal-open');
+                    }
+                };
+            }
+        }
+
         // ================================================================
 
         // 自建股参数公式（v10.1 新语义）：

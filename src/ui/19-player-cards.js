@@ -189,6 +189,7 @@
                                 <button class="inc-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>+</button>
                             </div>
                             <div class="action-group">
+                                <button class="btn-sm detail-custom" data-cid="${cs.id}" title="查看自建股详情" style="background:rgba(74,158,255,0.12);border:1px solid var(--accent,#4a9eff);color:var(--accent,#4a9eff);">详情</button>
                                 <button class="btn-sm btn-sm-invest inv-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>买</button>
                                 <button class="btn-sm btn-sm-withdraw wdr-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>卖</button>
                                 <button class="btn-sm btn-sm-max max-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>上限</button>
@@ -513,6 +514,12 @@
                     setInputValue(v);
                     input.focus();
                     input.select();
+                };
+
+                let detailBtn = card.querySelector(`.detail-custom[data-cid="${cs.id}"]`);
+                if (detailBtn) detailBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    showCustomStockDetail(cs.id);
                 };
 
                 let invBtn = card.querySelector(`.inv-custom[data-cid="${cs.id}"][data-pid="${p.id}"]`);
