@@ -1,6 +1,6 @@
 //  7. 自建股
 
-        // 自建股详情弹窗
+        // 自建股详情弹窗（自定义模态框）
         function showCustomStockDetail(stockId) {
             let cs = customStocks[stockId];
             if (!cs) return;
@@ -12,60 +12,106 @@
                 let inv = p.customStockInvestments && p.customStockInvestments[cs.id];
                 if (inv && inv > 0) { holderCount++; totalHolding += inv; }
             }
-            // 近期涨跌（最近8轮）
+            // 近期涨跌（最近12轮）生成迷你柱状图
             let hist = cs.history || [];
-            let recentHtml = '';
+            let barsHtml = '';
             if (hist.length > 0) {
-                let recent = hist.slice(-8);
-                recentHtml = recent.map((h,i) => {
+                let recent = hist.slice(-12);
+                let maxAbs = Math.max(...recent.map(h => Math.abs((h.multiplier||1)-1)), 0.01);
+                barsHtml = recent.map(h => {
                     let m = h.multiplier || 1;
-                    let pct = ((m - 1) * 100).toFixed(1);
-                    let color = m >= 1 ? 'var(--profit-green,#4ade80)' : 'var(--danger-red,#f87171)';
-                    let arrow = m >= 1 ? '▲' : '▼';
-                    return `<span style="display:inline-block;margin:2px 4px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,0.06);color:${color};font-size:0.8rem;">${arrow}${pct}%</span>`;
+                    let pct = (m - 1) * 100;
+                    let hPx = Math.max(4, Math.abs(pct) / maxAbs * 40);
+                    let color = m >= 1 ? '#4ade80' : '#f87171';
+                    let pos = m >= 1 ? 'bottom:50%;' : 'top:50%;';
+                    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:60px;position:relative;">
+                        <div style="width:70%;max-width:14px;height:${hPx}px;background:${color};border-radius:2px 2px 0 0;${pos}position:absolute;"></div>
+                    </div>`;
                 }).join('');
             } else {
-                recentHtml = '<span style="color:var(--text-secondary);">暂无历史数据</span>';
+                barsHtml = '<div style="color:var(--text-secondary);font-size:0.8rem;padding:20px 0;">暂无历史数据</div>';
             }
             let riskColor = cs.riskLevel === '高' ? '#f87171' : cs.riskLevel === '中' ? '#facc15' : '#4ade80';
+            let riskBg = cs.riskLevel === '高' ? 'rgba(248,113,113,0.15)' : cs.riskLevel === '中' ? 'rgba(250,204,21,0.15)' : 'rgba(74,222,128,0.15)';
             let ratioText = cs.ratio ? cs.ratio.toFixed(2) + ' : 1' : '—';
-            let body = `
-                <div style="text-align:left;font-size:0.9rem;line-height:1.8;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px;">
-                        <div><span style="color:var(--text-secondary);">创建者：</span>${creatorName}</div>
-                        <div><span style="color:var(--text-secondary);">初始投资：</span>${fmt(cs.initInvestment || 0)}</div>
-                        <div><span style="color:var(--text-secondary);">当前市值：</span><strong style="color:var(--accent-gold);">${fmt(cs.value || 0)}</strong></div>
-                        <div><span style="color:var(--text-secondary);">涨跌比：</span>${ratioText}</div>
-                        <div><span style="color:var(--text-secondary);">风险等级：</span><span style="color:${riskColor};font-weight:bold;">${cs.riskLevel || '—'}</span></div>
-                        <div><span style="color:var(--text-secondary);">波动系数：</span>${cs.volatility ? (cs.volatility*100).toFixed(0) + '%' : '—'}</div>
-                        <div><span style="color:var(--text-secondary);">涨停：</span><span style="color:var(--profit-green,#4ade80);">+${((cs.maxUp||0)*100).toFixed(0)}%</span></div>
-                        <div><span style="color:var(--text-secondary);">跌停：</span><span style="color:var(--danger-red,#f87171);">-${((cs.maxDown||0)*100).toFixed(0)}%</span></div>
-                        <div><span style="color:var(--text-secondary);">持仓人数：</span>${holderCount} 人</div>
-                        <div><span style="color:var(--text-secondary);">总持仓额：</span>${fmt(totalHolding)}</div>
-                    </div>
-                    <div style="margin-bottom:8px;color:var(--text-secondary);">近期涨跌（最近8轮）：</div>
-                    <div style="margin-bottom:8px;">${recentHtml}</div>
-                    <div style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;">股票ID: #${cs.id} · 创办者可撤销创建并退回所有持仓</div>
-                </div>`;
-            // 用 info-modal 显示
-            let overlay = document.getElementById('info-modal');
-            if (overlay) {
-                document.getElementById('info-modal-title').textContent = '📊 ' + cs.name + ' · 自建股详情';
-                document.getElementById('info-modal-body').innerHTML = body;
-                overlay.classList.add('active');
-                document.body.classList.add('modal-open');
-                let okBtn = document.getElementById('info-modal-ok');
-                okBtn.onclick = function() {
-                    overlay.classList.remove('active');
-                    document.body.classList.remove('modal-open');
-                };
-                overlay.onclick = function(e) {
-                    if (e.target === overlay) {
-                        overlay.classList.remove('active');
-                        document.body.classList.remove('modal-open');
-                    }
-                };
+            let upPct = ((cs.maxUp||0)*100).toFixed(0);
+            let downPct = ((cs.maxDown||0)*100).toFixed(0);
+            let volPct = cs.volatility ? (cs.volatility*100).toFixed(0) : '—';
+
+            // 动态创建模态框（如果不存在）
+            let overlay = document.getElementById('cs-detail-modal');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'cs-detail-modal';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.78);z-index:9500;display:none;justify-content:center;align-items:center;backdrop-filter:blur(8px);padding:20px;overflow-y:auto;';
+                document.body.appendChild(overlay);
             }
+            overlay.innerHTML = `
+                <div style="background:var(--bg-card);border-radius:18px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;border:1px solid rgba(255,183,77,0.3);box-shadow:0 8px 40px rgba(0,0,0,0.5),0 0 30px rgba(255,183,77,0.08);animation:csModalIn 0.25s ease-out;-webkit-overflow-scrolling:touch;">
+                    <style>@keyframes csModalIn{from{opacity:0;transform:translateY(16px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}</style>
+                    <!-- 标题栏 -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <span style="font-size:1.25rem;font-weight:bold;color:var(--accent-gold);">${cs.name}</span>
+                            <span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:rgba(255,183,77,0.15);color:#ffb74d;border:1px solid rgba(255,183,77,0.3);">自建股</span>
+                            <span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:${riskBg};color:${riskColor};border:1px solid ${riskColor};">${cs.riskLevel || '—'}风险</span>
+                        </div>
+                        <button id="cs-detail-close" style="background:none;border:none;color:var(--text-secondary);font-size:1.3rem;cursor:pointer;padding:4px 8px;border-radius:8px;line-height:1;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='none'">✕</button>
+                    </div>
+                    <!-- 市值大数字 -->
+                    <div style="padding:16px 20px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">当前市值</div>
+                        <div style="font-size:2rem;font-weight:bold;color:var(--accent-gold);">${fmt(cs.value || 0)}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">创建者：${creatorName} · 初始投资 ${fmt(cs.initInvestment || 0)}</div>
+                    </div>
+                    <!-- 详情网格 -->
+                    <div style="padding:16px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">涨跌比</div>
+                            <div style="font-size:1rem;font-weight:bold;color:var(--text-primary);">${ratioText}</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">波动系数</div>
+                            <div style="font-size:1rem;font-weight:bold;color:var(--text-primary);">±${volPct}%</div>
+                        </div>
+                        <div style="background:rgba(74,222,128,0.08);border-radius:10px;padding:10px 12px;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">涨停</div>
+                            <div style="font-size:1rem;font-weight:bold;color:#4ade80;">+${upPct}%</div>
+                        </div>
+                        <div style="background:rgba(248,113,113,0.08);border-radius:10px;padding:10px 12px;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">跌停</div>
+                            <div style="font-size:1rem;font-weight:bold;color:#f87171;">−${downPct}%</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">持仓人数</div>
+                            <div style="font-size:1rem;font-weight:bold;color:var(--text-primary);">${holderCount} 人</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">总持仓额</div>
+                            <div style="font-size:1rem;font-weight:bold;color:var(--text-primary);">${fmt(totalHolding)}</div>
+                        </div>
+                    </div>
+                    <!-- 近期走势 -->
+                    <div style="padding:0 20px 16px;">
+                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:8px;">近期走势（最近12轮）</div>
+                        <div style="display:flex;gap:3px;align-items:center;height:60px;background:rgba(255,255,255,0.03);border-radius:8px;padding:4px 6px;">${barsHtml}</div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-secondary);margin-top:4px;">
+                            <span>较早</span><span>较近</span>
+                        </div>
+                    </div>
+                    <!-- 底部 -->
+                    <div style="padding:12px 20px 18px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:0.7rem;color:var(--text-secondary);">股票ID: #${cs.id}</span>
+                        <button id="cs-detail-ok" style="background:var(--accent,#4a9eff);color:#fff;border:none;padding:8px 24px;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:bold;">关闭</button>
+                    </div>
+                </div>`;
+            overlay.style.display = 'flex';
+            document.body.classList.add('modal-open');
+            // 绑定关闭
+            function closeCs() { overlay.style.display = 'none'; document.body.classList.remove('modal-open'); }
+            overlay.querySelector('#cs-detail-close').onclick = closeCs;
+            overlay.querySelector('#cs-detail-ok').onclick = closeCs;
+            overlay.onclick = function(e) { if (e.target === overlay) closeCs(); };
         }
 
         // ================================================================
