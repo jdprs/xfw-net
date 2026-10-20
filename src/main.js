@@ -7,7 +7,7 @@
     const GAME_VERSION = '10.2';
     // 缓存戳（CACHE_BUST）：只在改代码后更新，用于强制浏览器刷新模块，不影响显示版本号
     // 小改动递增末尾数字（10.2.1、10.2.2…），发版时再与 GAME_VERSION 对齐
-    const CACHE_BUST = '10.2.1';
+    const CACHE_BUST = '10.2.2';
     window.GAME_VERSION = GAME_VERSION;
     window.CACHE_BUST = CACHE_BUST;
 
@@ -80,52 +80,75 @@
         'i18n/43-i18n.js',
     ];
 
-    function loadModule(index) {
-        if (index >= modulePaths.length) {
-            // v10.0: 联机模块加载
-            if (window.Net) {
-                if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
-                return;
-            }
-            const mode = window.GAME_MODE;
-            let netPaths = [];
-            if (mode === 'master' || mode === 'player') {
-                netPaths = ['net/36-p2p.js', 'net/37-lobby.js', 'net/38-game-sync.js', 'net/39-chat.js'];
-            } else if (!mode || mode === 'lobby') {
-                netPaths = ['net/36-p2p.js', 'net/37-lobby.js'];
-            }
-            if (netPaths.length === 0) {
-                if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
-                return;
-            }
-            let netIndex = 0;
-            const loadNet = () => {
-                if (netIndex >= netPaths.length) {
-                    if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
-                    return;
-                }
+    // 通用脚本加载：失败自动重试（最多 3 次，退避 400/900/1600ms），返回 Promise
+    function loadScript(src, retriesLeft) {
+        return new Promise((resolve) => {
+            const attempt = (left) => {
                 const s = document.createElement('script');
-                s.src = moduleBasePath + netPaths[netIndex] + '?v=' + CACHE_BUST;
-                s.onload = () => { netIndex++; loadNet(); };
+                s.src = src;
+                s.onload = () => resolve(true);
                 s.onerror = () => {
-                    console.error('Net module load failed: ' + netPaths[netIndex]);
-                    netIndex++;
-                    loadNet();
+                    s.remove();
+                    if (left > 0) {
+                        setTimeout(() => attempt(left - 1), 400 + (3 - left) * 500);
+                    } else {
+                        resolve(false);
+                    }
                 };
                 document.head.appendChild(s);
             };
-            loadNet();
-            return;
-        }
-        const script = document.createElement("script");
-        script.src = moduleBasePath + modulePaths[index] + '?v=' + CACHE_BUST;
-        script.onload = () => loadModule(index + 1);
-        script.onerror = () => {
-            console.error(`Module load failed: ${modulePaths[index]}`);
-            loadModule(index + 1);
-        };
-        document.head.appendChild(script);
+            attempt(retriesLeft);
+        });
     }
 
+    // 全部模块加载失败时，显示明显错误（避免静默后界面空白、日志/面板不出现）
+    function showLoadError(failedNames) {
+        const d = document.createElement('div');
+        d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(8,16,32,0.96);padding:24px;font-family:sans-serif;';
+        d.innerHTML = `<div style="max-width:420px;text-align:center;color:#e8eef7;">
+            <div style="font-size:2.4rem;margin-bottom:12px;">⚠️</div>
+            <div style="font-size:1.15rem;font-weight:700;margin-bottom:8px;">部分游戏文件加载失败</div>
+            <div style="font-size:0.88rem;opacity:0.75;margin-bottom:6px;">通常是网络不稳定导致，刷新页面即可恢复。</div>
+            <div style="font-size:0.75rem;opacity:0.5;margin-bottom:18px;word-break:break-all;">${failedNames.join(', ')}</div>
+            <button onclick="location.reload()" style="padding:10px 26px;font-size:1rem;border:none;border-radius:8px;background:#3b82f6;color:#fff;cursor:pointer;">🔄 刷新页面</button>
+        </div>`;
+        document.body.appendChild(d);
+    }
+
+    async function loadModule(index) {
+        // 顺序加载核心模块，失败重试；最终失败记录并提示
+        const failed = [];
+        for (let i = 0; i < modulePaths.length; i++) {
+            const src = moduleBasePath + modulePaths[i] + '?v=' + CACHE_BUST;
+            const ok = await loadScript(src, 3);
+            if (!ok) {
+                console.error('Module load failed after retries: ' + modulePaths[i]);
+                failed.push(modulePaths[i].split('/').pop());
+            }
+        }
+
+        // 加载联机（net）模块（若当前模式需要）
+        const mode = window.GAME_MODE;
+        let netPaths = [];
+        if (mode === 'master' || mode === 'player') {
+            netPaths = ['net/36-p2p.js', 'net/37-lobby.js', 'net/38-game-sync.js', 'net/39-chat.js'];
+        } else if (!mode || mode === 'lobby') {
+            netPaths = ['net/36-p2p.js', 'net/37-lobby.js'];
+        }
+        for (const np of netPaths) {
+            const ok = await loadScript(moduleBasePath + np + '?v=' + CACHE_BUST, 3);
+            if (!ok) {
+                console.error('Net module load failed after retries: ' + np);
+                failed.push(np.split('/').pop());
+            }
+        }
+
+        // 有关键模块失败则阻止开局，显示错误（避免空白界面）
+        if (failed.length > 0) {
+            showLoadError(failed);
+            return;
+        }
+        if (typeof window.onAllModulesLoaded === 'function') window.onAllModulesLoaded();
+    }
     loadModule(0);
 })();
