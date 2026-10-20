@@ -93,11 +93,21 @@
                     } else {
                         try {
                             const read = function(id) { const e = document.getElementById(id); return e ? e.value : null; };
+                            const adminCfg = {
+                                initMoney: read('admin-init-money'), bankMoney: read('admin-bank-money'),
+                                lootThreshold: read('admin-loot-threshold'), lootRatio: read('admin-loot-ratio'),
+                                volatilityScale: read('admin-volatility-scale'), algoMode: read('admin-algo-mode'),
+                                bannerDuration: read('admin-banner-duration'), thinkMin: read('admin-ai-think-min'),
+                                thinkMax: read('admin-ai-think-max'), chartType: read('admin-chart-type'),
+                                sharePrice: read('admin-share-price'), dhMult: read('admin-darkhorse-multiplier'),
+                                dhProb: read('admin-darkhorse-prob'), bThreshold: read('admin-bankruptcy-threshold'),
+                                bFund: read('admin-bankruptcy-fund')
+                            };
                             localStorage.setItem('xfw_local_config', JSON.stringify({
                                 humanPlayers: parseInt(read('human-players')) || 1,
                                 aiPlayers: parseInt(read('ai-players')) || 1,
                                 totalRounds: parseInt(read('total-rounds')) || 60,
-                                admin: null
+                                admin: adminCfg
                             }));
                         } catch(e) {}
                         location.href = 'game_local.html';
