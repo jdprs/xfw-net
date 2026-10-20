@@ -5,7 +5,11 @@
 (() => {
     // ===== 全局版本号（以后改版本号只需要改这里） =====
     const GAME_VERSION = '10.2';
+    // 缓存戳（CACHE_BUST）：只在改代码后更新，用于强制浏览器刷新模块，不影响显示版本号
+    // 小改动递增末尾数字（10.2.1、10.2.2…），发版时再与 GAME_VERSION 对齐
+    const CACHE_BUST = '10.2.1';
     window.GAME_VERSION = GAME_VERSION;
+    window.CACHE_BUST = CACHE_BUST;
 
     // 自动同步页面上的版本号显示
     function syncVersion() {
@@ -101,7 +105,7 @@
                     return;
                 }
                 const s = document.createElement('script');
-                s.src = moduleBasePath + netPaths[netIndex] + '?v=' + GAME_VERSION;
+                s.src = moduleBasePath + netPaths[netIndex] + '?v=' + CACHE_BUST;
                 s.onload = () => { netIndex++; loadNet(); };
                 s.onerror = () => {
                     console.error('Net module load failed: ' + netPaths[netIndex]);
@@ -114,7 +118,7 @@
             return;
         }
         const script = document.createElement("script");
-        script.src = moduleBasePath + modulePaths[index] + '?v=' + GAME_VERSION;
+        script.src = moduleBasePath + modulePaths[index] + '?v=' + CACHE_BUST;
         script.onload = () => loadModule(index + 1);
         script.onerror = () => {
             console.error(`Module load failed: ${modulePaths[index]}`);
