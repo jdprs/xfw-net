@@ -83,10 +83,14 @@ function aiInvestCustomStock(player, investBudget) {
     if (typeof customStocks === 'undefined' || typeof investCustomStock !== 'function') return false;
     let available = customStocks.filter(cs => !cs.revoked && cs.value >= 0);
     if (available.length === 0) return false;
-    // 选最近涨幅最大的
-    let sorted = [...available].sort((a,b) => (b.recentMultiplier||1) - (a.recentMultiplier||1));
-    let target = sorted[0];
-    let amt = Math.round(investBudget * (0.15 + Math.random() * 0.2));
+    // 优先投资【他人创建】的自建股（调动AI投资他人自建股的热情）
+    let others = available.filter(cs => cs.creatorId !== player.id);
+    let pool = others.length > 0 ? others : available;
+    // 按近期涨幅排序，从涨幅前2中随机选一个（避免所有AI都挤同一只）
+    let sorted = [...pool].sort((a,b) => (b.recentMultiplier||1) - (a.recentMultiplier||1));
+    let target = sorted[Math.random() < 0.7 ? 0 : Math.min(1, sorted.length - 1)];
+    // 投资金额比例提高到预算的 40%~70%（调动热情）
+    let amt = Math.round(investBudget * (0.40 + Math.random() * 0.30));
     amt = Math.max(100, Math.min(amt, player.cash - 50));
     if (amt < 100 || amt > player.cash) return false;
     let cashBefore = player.cash;
@@ -357,9 +361,11 @@ function makeAIDecision(player) {
         if (customCount < 3 && Math.random() < 0.10 && player.cash > 500) {
             if (aiCreateCustomStock(player, investBudget)) return;
         }
-        // 有概率投资自建股（15%）
-        if (customCount > 0 && Math.random() < 0.15 && investBudget > 100) {
-            if (aiInvestCustomStock(player, investBudget)) return;
+        // 有概率投资他人自建股（45%）：预算取仓位缺口与闲置现金(50%)的较大者，
+        // 即使没有股票仓位缺口，也会用闲钱投资，调动热情
+        if (customCount > 0 && Math.random() < 0.55) {
+            let customBudget = Math.max(investBudget, Math.round(player.cash * 0.5));
+            if (customBudget > 100 && aiInvestCustomStock(player, customBudget)) return;
         }
     }
 
