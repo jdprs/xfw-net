@@ -12,41 +12,6 @@
                 let inv = p.customStockInvestments && p.customStockInvestments[cs.id];
                 if (inv && inv > 0) { holderCount++; totalHolding += inv; }
             }
-            // 近期涨跌（最近12轮）迷你柱状图：flex 占位，高度固定，避免定位错乱
-            let hist = cs.history || [];
-            let barsHtml = '';
-            if (hist.length > 0) {
-                let recent = hist.slice(-12);
-                const BAR_HALF = 24;   // 中心线上下可用高度
-                let maxAbs = Math.max(...recent.map(h => Math.abs((h.multiplier||1)-1)), 0.02);
-                barsHtml = `<div style="position:relative;height:${BAR_HALF*2}px;">
-                    <div style="position:absolute;left:0;right:0;top:${BAR_HALF}px;height:1px;background:rgba(255,255,255,0.14);z-index:0;"></div>
-                    <div style="display:flex;gap:3px;position:relative;z-index:1;height:100%;">
-                        ${recent.map(h => {
-                            let m = h.multiplier || 1;
-                            let pct = (m - 1) * 100;
-                            let hPx = Math.max(2, Math.round(Math.abs(pct) / maxAbs * BAR_HALF));
-                            let isUp = m >= 1;
-                            let color = isUp ? '#4ade80' : '#f87171';
-                            let bg = isUp
-                                ? 'linear-gradient(to top, rgba(74,222,128,0.5), rgba(74,222,128,0.95))'
-                                : 'linear-gradient(to bottom, rgba(248,113,113,0.5), rgba(248,113,113,0.95))';
-                            let radius = isUp ? '3px 3px 0 0' : '0 0 3px 3px';
-                            // 固定高度 spacer，保证总高 = BAR_HALF*2
-                            let topSpacer = isUp ? BAR_HALF - hPx : BAR_HALF;
-                            let bottomSpacer = isUp ? BAR_HALF : BAR_HALF - hPx;
-                            return `<div style="flex:1;display:flex;flex-direction:column;min-width:0;">
-                                <div style="height:${topSpacer}px;flex:none;"></div>
-                                <div style="height:${hPx}px;flex:none;background:${bg};border-radius:${radius};"></div>
-                                <div style="height:${bottomSpacer}px;flex:none;"></div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>`;
-            } else {
-                barsHtml = '<div style="color:var(--text-secondary);font-size:0.8rem;padding:14px 0;text-align:center;">暂无历史数据</div>';
-            }
-
             let riskColor = cs.riskLevel === '高' ? '#f87171' : cs.riskLevel === '中' ? '#facc15' : '#4ade80';
             let riskBg = cs.riskLevel === '高' ? 'rgba(248,113,113,0.15)' : cs.riskLevel === '中' ? 'rgba(250,204,21,0.15)' : 'rgba(74,222,128,0.15)';
             let ratioText = cs.ratio ? cs.ratio.toFixed(2) + ' : 1' : '—';
@@ -105,14 +70,6 @@
                         <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:10px 12px;">
                             <div style="font-size:0.7rem;color:var(--text-secondary);">总持仓额</div>
                             <div style="font-size:1rem;font-weight:bold;color:var(--text-primary);">${fmt(totalHolding)}</div>
-                        </div>
-                    </div>
-                    <!-- 近期走势 -->
-                    <div style="padding:0 20px 16px;">
-                        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:8px;">近期走势（最近12轮）</div>
-                        <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:8px 10px;">${barsHtml}</div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--text-secondary);margin-top:4px;">
-                            <span>较早</span><span>较近</span>
                         </div>
                     </div>
                     <!-- 底部 -->
