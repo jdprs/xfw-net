@@ -7,7 +7,7 @@
     const GAME_VERSION = '10.2';
     // 缓存戳（CACHE_BUST）：只在改代码后更新，用于强制浏览器刷新模块，不影响显示版本号
     // 小改动递增末尾数字（10.2.1、10.2.2…），发版时再与 GAME_VERSION 对齐
-    const CACHE_BUST = '10.2.2';
+    const CACHE_BUST = '10.2.3';
     window.GAME_VERSION = GAME_VERSION;
     window.CACHE_BUST = CACHE_BUST;
 
@@ -78,6 +78,7 @@
         'ui/40-premium.js',
         'ui/42-help.js',
         'i18n/43-i18n.js',
+        'ui/45-settings-memory.js',
     ];
 
     // 通用脚本加载：失败自动重试（最多 3 次，退避 400/900/1600ms），返回 Promise
