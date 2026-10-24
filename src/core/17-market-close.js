@@ -104,6 +104,16 @@
                     stocks[k].volatility = clamp(Math.sqrt(sq) * 1.2, 0.01, 0.6);
                 }
             });
+            // 记录自建股更新前的持仓价值（用于计算本轮盈亏）
+            let oldCustomHoldings = {};
+            players.forEach(p => {
+                oldCustomHoldings[p.id] = {};
+                customStocks.forEach(cs => {
+                    if (!cs.revoked && p.customStockInvestments && p.customStockInvestments[cs.id]) {
+                        oldCustomHoldings[p.id][cs.id] = p.customStockInvestments[cs.id];
+                    }
+                });
+            });
             updateCustomStockValues(finalMults);
 
             resolvePredictions();
@@ -133,6 +143,13 @@
                     let profit = Math.round(shares * (newPrice - oldPrice));
                     pl[k] = profit;
                 });
+                // 自建股本轮盈亏 = 更新后持仓价值 - 更新前持仓价值（已撤销的跳过）
+                customStocks.forEach(cs => {
+                    if (cs.revoked) return;
+                    let oldH = (oldCustomHoldings[p.id] && oldCustomHoldings[p.id][cs.id]) || 0;
+                    let newH = (p.customStockInvestments && p.customStockInvestments[cs.id]) || 0;
+                    pl['custom_' + cs.id] = newH - oldH;
+                });
                 playerPL[p.id] = pl;
             });
 
@@ -152,9 +169,11 @@
                 let isDark = darkHorseInfo && darkHorseInfo.active && darkHorseInfo.key === k;
                 summary += `  ${k}股${isDark ? ' 🐴黑马' : ''}：${pct}%，现价 ${fmt(stocks[k].price)}\n`;
             });
-            if (customStocks.length) {
+            // 只显示当前仍存在（未撤销）的自建股
+            let activeCustom = customStocks.filter(cs => !cs.revoked);
+            if (activeCustom.length) {
                 summary += '✨ 自建股：\n';
-                customStocks.forEach(cs => {
+                activeCustom.forEach(cs => {
                     let m = cs.recentMultiplier || 1;
                     let pct = ((m - 1) * 100).toFixed(1);
                     let isDark = darkHorseInfo && darkHorseInfo.active && darkHorseInfo.key === `custom_${cs.id}`;
@@ -189,6 +208,13 @@
                     return '';
                 }).filter(s => s).join(' ');
                 if (plStr) summary += `    盈亏：${plStr}\n`;
+                // 自建股本轮盈亏（绿涨红亏，已撤销的不显示）
+                let csPlStr = customStocks.filter(cs => !cs.revoked).map(cs => {
+                    let v = pl['custom_' + cs.id] || 0;
+                    if (v !== 0) return `${cs.name} ${v>0?'+':''}${fmt(v)}`;
+                    return '';
+                }).filter(s => s).join(' ');
+                if (csPlStr) summary += `    自建股：${csPlStr}\n`;
             });
             if (round === totalRounds) {
                 summary += '\n🏁 **这是最后一轮！** 游戏即将结束！\n';

@@ -193,7 +193,7 @@
                                 <button class="btn-sm btn-sm-invest inv-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>买</button>
                                 <button class="btn-sm btn-sm-withdraw wdr-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>卖</button>
                                 <button class="btn-sm btn-sm-max max-custom" data-cid="${cs.id}" data-pid="${p.id}" ${disabled ? 'disabled' : ''}>上限</button>
-                                ${cs.creatorId === p.id ? `<button class="btn-sm revoke-custom" data-cid="${cs.id}" data-pid="${p.id}" title="撤销创建并退回所有持仓" style="background:rgba(198,40,40,0.15);border:1px solid var(--danger-red);color:var(--danger-red);">撤销</button>` : ''}
+                                ${cs.creatorId === p.id ? `<button class="btn-sm revoke-custom" data-cid="${cs.id}" data-pid="${p.id}" title="撤销创建并退回所有持仓" ${disabled ? 'disabled' : ''} style="background:rgba(198,40,40,0.15);border:1px solid var(--danger-red);color:var(--danger-red);">撤销</button>` : ''}
                             </div>
                         </div>`;
                 }).filter(s => s).join('');
@@ -583,6 +583,11 @@
                     revokeBtn.onclick = function(e) {
                         e.stopPropagation();
                         if (cs.creatorId !== p.id) return;
+                        // 决策完成后不允许撤销（与其他交易按钮一致）
+                        if (decisionState !== 'deciding' || decidingPlayerId !== p.id) {
+                            showBanner('请先点击「决策」开始操作', 'warning', null, '⚠️ 操作无效');
+                            return;
+                        }
                         if (!confirm(`确定撤销自建股「${cs.name}」？所有持有者将按当前价值退回现金。`)) return;
                         revokeCustomStock(p.id, cs.id);
                     };
